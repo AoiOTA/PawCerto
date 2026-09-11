@@ -1,0 +1,11 @@
+model = "gpt-6-astra" # KISS My Agent managed
+model_reasoning_effort = "high" # KISS My Agent managed
+
+[features]
+multi_agent = true # KISS My Agent managed
+
+[features.context_management]
+experimental_mode = true # KISS My Agent managed
+
+[agents]
+enabled = true # KISS My Agent managed
