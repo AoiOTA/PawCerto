@@ -35,4 +35,42 @@ The saved iteration-500 training log reports EE error 0.0611876 m / 0.4501084 ra
 
 The discrepancy is observed; this evaluation alone does not locate a training bug, identify an engine-transfer cause or establish final learning failure. The authorized single candidate continues to update 4000 with unchanged task, rewards and physics. Model4000 and final paired Lab evaluation remain pending.
 
+
+## Bounded first-failure review
+
+A read-only review of the earliest failing case, 07, found a concrete physical
+constraint difference that is already declared in
+[`configs/as2_piper.json`](../configs/as2_piper.json): the Lab adapter configures
+URDF joint-speed limits through `velocity_limit_sim`, while the MuJoCo adapter
+limits actions and actuator torque but does not enforce those speed limits.
+The six Piper source limits are 5 rad/s. This is an observed modeling difference,
+not a newly proven binding, quaternion, control-delay or torque-clipping bug.
+
+In the saved `physical[:,54:72]` joint-velocity columns, model500 Piper joints
+5/6 reach 7.392 / 16.264 rad/s at 0.06 s; model0 has 0.260 / -3.997 rad/s at
+the same time. The first saved contact is at 0.16 s, so this speed divergence
+precedes the first sampled contact, not necessarily every intervening contact.
+Both policies had identical saved physical state at 0.04 s. By 0.44 s,
+model500 joint6 is at -2317.97 rad/s; the last finite 0.46 s state is already
+numerically exploded. The subsequent BADQACC record gives
+`time_before_step_s=0.4600000000000003`.
+
+All saved actuator torques remain within configured limits, and the largest
+raw action through 0.44 s is 19.725, below the configured clipping magnitude
+100. The 20 ms delay and four 5 ms substeps use equivalent action selection in
+the two current controllers. This excludes those specific saved-path mistakes;
+it is not a complete dynamics-equivalence proof. The model0 reference also
+exceeds the source limit modestly (joint2 reaches 6.340 rad/s), so exceeding
+5 rad/s alone is not a sufficient failure condition.
+
+The saved trace has 20 ms endpoints and last-substep torque, without complete
+5 ms constraint response or a matching Lab model500 trajectory. It cannot
+assign the failure to velocity constraints, integration, joint stops, contact
+or their interaction with policy actions. In particular, last-substep torque
+must not be recomputed from the later endpoint state to allege a PD error.
+No source, physics or training parameters changed from this review. A future
+causal comparison would isolate the early case07 Piper speed-constraint
+response; post-step `qvel` clipping would not establish PhysX-equivalent
+constraints. The planned final Lab comparison remains required.
+
 Artifacts: `runs/as2_umi_seed0_4096_4000_fixed16_500/summary.json`, `fixed16-audit.json`, `model0-paired-comparison.json`, and all `case_*.json`/`case_*.npz`. The paired JSON retains root motion, arm ranges, support and exact failure details for each case. Original evaluator exit status was 2; audit success only verifies preserved identities and arrays.
