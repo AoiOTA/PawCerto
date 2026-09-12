@@ -122,6 +122,11 @@ class RoboDuetIsaacTrainingEnv:
     def get_arm_observations(self):
         return self.observer.arm(vars(self.task))
 
+    def randomize_episode_lengths(self):
+        # auto_train.py enables this once, after reset and before arm observations.
+        self.task.episode_length_buf = torch.randint_like(
+            self.task.episode_length_buf, high=int(self.task.max_episode_length))
+
     def get_dog_observations(self):
         return self.observer.dog(vars(self.task),self.stage == 2)
 
@@ -160,16 +165,22 @@ class RoboDuetIsaacTrainingEnv:
         self.step(torch.zeros(self.num_envs,12,device=self.device),torch.zeros(self.num_envs,6,device=self.device))
         self.observer.clear()
 
-    def step(self, dog_action, arm_action):
+    def step(self, dog_action, arm_action, *, pre_reset_callback=None, substep_callback=None):
         if self.stage == 1: arm_action = torch.zeros_like(arm_action)
         actions = torch.cat((dog_action,arm_action),-1)
         self.task.prev_foot_velocities = self.task.foot_velocities.clone()
-        for _ in range(self.controller.decimation):
+        for substep in range(self.controller.decimation):
             q,qd = self.runtime.joints()
+            before = (q.clone(), qd.clone()) if substep_callback is not None else None
             output = self.controller.compute(actions,q,qd,kp_factors=self.buffers['Kp_factors'],
                                               kd_factors=self.buffers['Kd_factors'],motor_offsets=self.buffers['motor_offsets'],
                                               motor_strengths=self.buffers['motor_strengths'])
-            self.runtime.step_control(output['leg_effort'],output['arm_position'])
+            if substep_callback is not None:
+                state = self.runtime.step_control(output['leg_effort'],output['arm_position'])
+            else:
+                state = self.runtime.step_control(output['leg_effort'],output['arm_position'],capture_state=False)
+            if substep_callback is not None:
+                substep_callback(self, substep, before, output, state)
         for key, source in [('actions','actions'),('joint_pos_target','joint_pos_target'),('torques','combined')]:
             self.buffers[key].copy_(output[source])
         self._refresh_physics()
@@ -187,6 +198,10 @@ class RoboDuetIsaacTrainingEnv:
         dones,timeouts = self.task.check_termination()
         dog_reward,arm_reward = self.task.compute_reward()
         dog_reward,arm_reward = dog_reward.clone(),arm_reward.clone()
+        if pre_reset_callback is not None:
+            # Evaluation must copy terminal physics before reset mutates it.
+            # Let observer failures propagate; never return incomplete evidence.
+            pre_reset_callback(self, dones, timeouts)
         episode = self._reset_indices(dones.nonzero().flatten())
         self.buffers['last_plan_actions'].copy_(self.buffers['plan_actions'])
         self.buffers['last_last_actions'].copy_(self.buffers['last_actions'])

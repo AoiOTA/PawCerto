@@ -11,12 +11,42 @@ from isaaclab.sensors import ContactSensorCfg
 from isaaclab.utils import configclass
 from isaaclab.utils.math import quat_apply
 from isaaclab_physx.physics import PhysxCfg
-import runpy
+from pawcerto.robots.go1_arx5 import JOINT_NAMES, DEFAULT_POS
+from pawcerto.robots.urdf import read_joint_limits
 ROOT = Path(__file__).resolve().parents[2]
-_asset = runpy.run_path(str(ROOT / 'pawcerto/mujoco/roboduet_asset.py'))
-JOINT_NAMES, DEFAULT_POS = _asset['JOINT_NAMES'], _asset['DEFAULT_POS']
 
 DEFAULT_USD = ROOT / 'reference/isaac/go1_arx5/usd_path.txt'
+
+
+@sim_utils.clone
+def spawn_roboduet(prim_path, cfg, translation=None, orientation=None, **kwargs):
+    """Apply source physics overrides once before Lab clones the articulation."""
+    from pxr import Usd, UsdPhysics, PhysxSchema
+    prim = sim_utils.spawn_from_usd(prim_path, cfg, translation, orientation, **kwargs)
+    stage = prim.GetStage()
+    instances = set()
+    for child in Usd.PrimRange(prim, Usd.TraverseInstanceProxies()):
+        if child.HasAPI(UsdPhysics.CollisionAPI) and child.IsInstanceProxy():
+            # A prepared shared geometry layer can already carry these values.
+            # Keep its instances shared; only legacy assets need local overrides.
+            if (child.GetAttribute('physxCollision:contactOffset').Get() is not None
+                and math.isclose(child.GetAttribute('physxCollision:contactOffset').Get(), cfg.collision_props.contact_offset, rel_tol=1e-6)
+                and child.GetAttribute('physxCollision:restOffset').Get() == cfg.collision_props.rest_offset):
+                continue
+            parent = child.GetParent()
+            while not parent.IsInstance():
+                parent = parent.GetParent()
+            instances.add(str(parent.GetPath()))
+    for instance in instances:
+        sim_utils.make_uninstanceable(instance, stage=stage)
+    for child in Usd.PrimRange(prim):
+        if child.HasAPI(UsdPhysics.CollisionAPI):
+            sim_utils.modify_collision_properties(str(child.GetPath()), cfg.collision_props, stage=stage)
+        if child.HasAPI(UsdPhysics.RigidBodyAPI):
+            sim_utils.modify_rigid_body_properties(str(child.GetPath()), cfg.rigid_props, stage=stage)
+            PhysxSchema.PhysxContactReportAPI.Apply(child).CreateThresholdAttr(0.)
+    print('[RoboDuet] Source articulation physics overrides complete', flush=True)
+    return prim
 
 
 class Go1Arx5Isaac:
@@ -30,10 +60,10 @@ class Go1Arx5Isaac:
         if path.suffix == '.txt':
             path = Path(path.read_text().strip())
         tree = ET.parse(path.parent.parent / 'merged.urdf')
-        joint_map = {j.get('name'): j for j in tree.findall('joint')}
-        velocity = {n: float(joint_map[n].find('limit').get('velocity')) for n in JOINT_NAMES}
-        self.dof_pos_limits = torch.tensor([[float(joint_map[n].find('limit').get(k)) for k in ('lower','upper')] for n in JOINT_NAMES],device=device)
-        self.torque_limits = torch.tensor([float(joint_map[n].find('limit').get('effort')) for n in JOINT_NAMES], device=device)
+        limits = read_joint_limits(path.parent.parent / 'merged.urdf', JOINT_NAMES)
+        velocity = {n: limits[n]['velocity'] for n in JOINT_NAMES}
+        self.dof_pos_limits = torch.tensor([[limits[n][k] for k in ('lower','upper')] for n in JOINT_NAMES],device=device)
+        self.torque_limits = torch.tensor([limits[n]['effort'] for n in JOINT_NAMES], device=device)
         kp = dict(zip(JOINT_NAMES, [0.] * 12 + [40.,70.,70.,25.,25.,25.,50.,50.]))
         kd = dict(zip(JOINT_NAMES, [0.] * 12 + [3.,15.,15.,2.,2.,2.,20.,20.]))
         collision = sim_utils.CollisionPropertiesCfg(contact_offset=.01, rest_offset=0.)
@@ -44,7 +74,7 @@ class Go1Arx5Isaac:
                 physics_material=sim_utils.RigidBodyMaterialCfg(static_friction=1.,dynamic_friction=1.,restitution=0.)),
                 init_state=AssetBaseCfg.InitialStateCfg(pos=(0.,0.,-.05)))
             robot = ArticulationCfg(prim_path='{ENV_REGEX_NS}/Robot',
-                spawn=sim_utils.UsdFileCfg(usd_path=str(path), activate_contact_sensors=True,
+                spawn=sim_utils.UsdFileCfg(func=spawn_roboduet, usd_path=str(path), activate_contact_sensors=True,
                     collision_props=collision,
                     rigid_props=sim_utils.RigidBodyPropertiesCfg(disable_gravity=False,linear_damping=0.,angular_damping=0.,
                         max_linear_velocity=1000.,max_angular_velocity=math.degrees(1000.),max_depenetration_velocity=1.),
@@ -73,24 +103,9 @@ class Go1Arx5Isaac:
             filters = ['/World/Ground/geometry/mesh'] + [paths[other] for other in self.contact_names if other != name]
             setattr(cfg,'contact_' + name,ContactSensorCfg(prim_path=paths[name],update_period=0.,
                 filter_prim_paths_expr=filters,track_friction_forces=True,max_contact_data_count_per_prim=32))
+        print(f'[RoboDuet] Constructing {num_envs} environments', flush=True)
         self.scene = InteractiveScene(cfg)
-        from pxr import Usd, UsdPhysics, PhysxSchema
-        instances = set()
-        for prim in self.sim.stage.Traverse(Usd.TraverseInstanceProxies()):
-            if str(prim.GetPath()).startswith('/World/envs/') and prim.HasAPI(UsdPhysics.CollisionAPI) and prim.IsInstanceProxy():
-                parent = prim.GetParent()
-                while not parent.IsInstance():
-                    parent = parent.GetParent()
-                instances.add(str(parent.GetPath()))
-        for instance in instances:
-            sim_utils.make_uninstanceable(instance,stage=self.sim.stage)
-        for prim in self.sim.stage.Traverse():
-            if str(prim.GetPath()).startswith('/World/envs/'):
-                if prim.HasAPI(UsdPhysics.CollisionAPI):
-                    sim_utils.modify_collision_properties(str(prim.GetPath()),collision,stage=self.sim.stage)
-                if prim.HasAPI(UsdPhysics.RigidBodyAPI):
-                    sim_utils.modify_rigid_body_properties(str(prim.GetPath()),cfg.robot.spawn.rigid_props,stage=self.sim.stage)
-                    PhysxSchema.PhysxContactReportAPI.Apply(prim).CreateThresholdAttr(0.)
+        print('[RoboDuet] Scene constructed; initializing physics', flush=True)
         self.sim.reset()
         self.scene.update(self.dt)
         self.robot = self.scene['robot']
@@ -143,7 +158,7 @@ class Go1Arx5Isaac:
     def joints(self):
         return self.robot.data.joint_pos.torch[:,self.joint_ids], self.robot.data.joint_vel.torch[:,self.joint_ids]
 
-    def step_control(self, leg_torque, arm_target):
+    def step_control(self, leg_torque, arm_target, *, capture_state=True):
         combined = torch.cat((leg_torque,arm_target),dim=-1)
         self.robot.set_joint_effort_target(combined,joint_ids=self.joint_ids)
         # Gym EFFORT drive ignores its target write but retains a zero-rest
@@ -157,7 +172,9 @@ class Go1Arx5Isaac:
         self.sim.step(render=False)
         self.scene.update(self.dt)
         self.time += self.dt
-        return self.state()
+        # Training only consumes the policy-boundary state. Keep sensor reads
+        # optional without changing physics, scene timestamps, or joint reads.
+        return self.state() if capture_state else None
 
     def state(self):
         d = self.robot.data

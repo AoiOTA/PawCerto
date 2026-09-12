@@ -1,11 +1,11 @@
 """Five-module RoboDuet CPU exports, with the arm playback semantics explicit."""
 from copy import deepcopy
-import hashlib
 import io
 import json
 from pathlib import Path
 
 import torch
+from pawcerto.artifacts import file_identity
 
 from .policy import build_models
 
@@ -93,7 +93,7 @@ def export_checkpoint(checkpoint_path, output, joint_names, *, mode='official_pl
         blobs[key] = stream.getvalue()
     info = {
         'format': 'pawcerto.roboduet.export.v1',
-        'checkpoint_sha256': hashlib.sha256(checkpoint_path.read_bytes()).hexdigest(),
+        'checkpoint_sha256': file_identity(checkpoint_path)['sha256'],
         'next_iteration': checkpoint['next_iteration'],
         'next_rollout_stage': checkpoint['stage'],
         'arm_update_count': arm_updates,

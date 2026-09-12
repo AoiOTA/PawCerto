@@ -19,6 +19,29 @@ parameters, as in the source. The arm training distribution applies tanh only
 to the last two means before Normal sampling; the official playback graph uses
 raw means.
 
+Fresh runs now match `auto_train.py`'s `init_at_random_ep_len=True`: after reset,
+the episode age is sampled with the upstream `torch.randint_like` expression
+before the initial arm observation. Resume skips fresh age randomization and
+restores the saved episode ages and RNG. The CPU test executes the actual
+upstream assignment and checks both seeded ages and the following RNG state.
+
+The authorized seed-0 complete candidate uses 4096 environments, the original
+24/5/4 rollout/epoch/minibatch recipe, 50000 updates and switch iteration 10000.
+Its output is `outputs/roboduet-learning-seed0-20260912/`. The CLI saves initial,
+stage-boundary and final checkpoints plus recovery checkpoints every 400 updates
+when called with `--save-every 400`. The boundary's `next_iteration=10001` still
+has zero arm updates; the planned endpoint has 39999. Per-update JSON records
+wall time, transitions/second, and Torch CUDA allocated/reserved peaks; those
+Torch values exclude simulator allocations. Physical evaluation of frozen
+checkpoints is needed before interpreting training as learning.
+
+Training skips unused full-state captures between policy boundaries while
+retaining every physics step and evaluation substep callback. The measured
+4096-environment Stage 1 comparison improved full-update throughput by 1.52952×;
+one cached contact-force element differed by one float32 ULP, while the saved
+models, optimizers, RNG and training metrics matched. See the
+[complete throughput result and its limits](roboduet-throughput.md).
+
 `RoboDuetIsaacTrainingEnv` uses the actual task rewards, command curricula and
 termination conditions in `training/task.py`, the method observer/controller,
 and `Go1Arx5Isaac` public physics APIs. The default plane/no-vision/M-control
@@ -65,6 +88,10 @@ curriculum state, physical state and random parameters, observation/history
 caches, and Python/NumPy/CPU/CUDA RNG states. CPU RNG is always loaded as a CPU
 uint8 tensor. Save is atomic and allowed only at a completed iteration boundary.
 This is a PawCerto extension: upstream resume loads only network weights.
+On resume, startup preserves an existing `model_<next_iteration>.pt` in the
+output directory; it does not replace the original checkpoint with a newly
+serialized post-restore state. New continuation directories still receive an
+initial checkpoint. Later boundary and final saves retain their normal behavior.
 
 Explicit articulation state restore does not restore PhysX internal contact
 caches. Consequently a real simulator restart is not claimed to be a bitwise

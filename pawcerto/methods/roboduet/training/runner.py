@@ -33,7 +33,7 @@ class RoboDuetRunner:
     Checkpoints include the stale arm observation retained across Stage 1. Physical
     restore precision is the environment's contract, not a bitwise PhysX guarantee.
     """
-    def __init__(self, env, config, device='cpu'):
+    def __init__(self, env, config, device='cpu', *, init_at_random_ep_len=True):
         self.env, self.config, self.device = env, deepcopy(config), torch.device(device)
         self.dog_model, self.arm_model = build_models(config, device)
         self.alg_dog = PPO(self.dog_model, device, config['PPO_Args'])
@@ -54,6 +54,8 @@ class RoboDuetRunner:
         self._at_boundary = True
         env.set_stage(1)
         env.reset()
+        if init_at_random_ep_len:
+            env.randomize_episode_lengths()
         self.arm_obs = env.get_arm_observations()
 
     def run_iteration(self):

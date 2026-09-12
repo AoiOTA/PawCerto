@@ -127,6 +127,12 @@ project-local KMA metadata outside PawCerto's public files.
 
 ## Later work and stop boundaries
 
+For AS2 EDU / Piper H, transfer proceeds first through UMI-on-Legs, then
+through RoboDuet. Preserve each method's own observations, controller, rewards
+and training/evaluation path; asset preparation or a short integration run
+does not qualify either transfer as learned control. See the current
+[UMI robot adaptation](as2-umi-adaptation.md) and [RoboDuet evaluation protocol](roboduet-evaluation.md).
+
 After UMI's current stage, continue RoboDuet on Go1/ARX5 with its real two-stage
 and five-module execution path, then DeepWBC with its actual supported target
 dimensions and adaptation/advantage-mixing mechanisms. MLM waits for sufficient

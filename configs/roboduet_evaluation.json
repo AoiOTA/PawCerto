@@ -1,0 +1,200 @@
+{
+  "format": "pawcerto.roboduet.fixed_protocol.v1",
+  "seeds": [
+    2027,
+    2028,
+    2029
+  ],
+  "duration_s": 20.0,
+  "trajectory_s": 2.5,
+  "mode": "official_play",
+  "terrain": "plane",
+  "dynamics": "nominal; domain randomization and observation noise disabled; original seeded reset q and root velocity",
+  "initialization": "original zero-action reset step retained and reported separately; terminal initialization is invalid_prefix and ends that case",
+  "evaluation_stage": 2,
+  "target_iterations": [
+    0,
+    10001,
+    50000
+  ],
+  "cases": [
+    {
+      "name": "standing_ee_motion",
+      "dog": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      "arm_lpy_rpy": [
+        [
+          0.5,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0.6,
+          0.3,
+          0.4,
+          0.2,
+          0.2,
+          0.3
+        ],
+        [
+          0.45,
+          -0.3,
+          -0.4,
+          -0.2,
+          -0.2,
+          -0.3
+        ],
+        [
+          0.55,
+          0.15,
+          0,
+          0,
+          0.3,
+          0
+        ]
+      ]
+    },
+    {
+      "name": "locomotion_fixed_ee",
+      "dog": [
+        [
+          0.4,
+          0,
+          0
+        ],
+        [
+          0,
+          0.2,
+          0
+        ],
+        [
+          0.2,
+          0,
+          0.3
+        ],
+        [
+          -0.2,
+          0,
+          -0.3
+        ]
+      ],
+      "arm_lpy_rpy": [
+        [
+          0.5,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0.5,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0.5,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0.5,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      ]
+    },
+    {
+      "name": "simultaneous_commands",
+      "dog": [
+        [
+          0.4,
+          0,
+          0
+        ],
+        [
+          0,
+          0.2,
+          0
+        ],
+        [
+          0.2,
+          0,
+          0.3
+        ],
+        [
+          -0.2,
+          0,
+          -0.3
+        ]
+      ],
+      "arm_lpy_rpy": [
+        [
+          0.5,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0.6,
+          0.3,
+          0.4,
+          0.2,
+          0.2,
+          0.3
+        ],
+        [
+          0.45,
+          -0.3,
+          -0.4,
+          -0.2,
+          -0.2,
+          -0.3
+        ],
+        [
+          0.55,
+          0.15,
+          0,
+          0,
+          0.3,
+          0
+        ]
+      ]
+    }
+  ],
+  "acceptance": "engineering comparison; no pass threshold; tracking and survival reported jointly; no retuning against these cases"
+}

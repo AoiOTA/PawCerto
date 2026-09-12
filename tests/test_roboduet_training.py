@@ -84,6 +84,11 @@ class ProtocolEnv:
         self.cfg, self.num_envs, self.calls = cfg['Cfg'], 5, []
         self.histories = {s: torch.zeros(5, self.cfg[s][s+'_num_obs_history']) for s in ('dog','arm')}
         self.counter = 0
+        self.episode_length_buf = torch.zeros(5,dtype=torch.long)
+        self.max_episode_length = 1000
+
+    def randomize_episode_lengths(self):
+        self.episode_length_buf = torch.randint_like(self.episode_length_buf,high=self.max_episode_length)
 
     def set_stage(self, stage):
         self.stage = stage
@@ -116,10 +121,11 @@ class ProtocolEnv:
         for history in self.histories.values(): history[ids] = 0
 
     def training_state(self):
-        return dict(counter=self.counter, histories=self.histories)
+        return dict(counter=self.counter, histories=self.histories,episode_length_buf=self.episode_length_buf)
 
     def load_training_state(self, state):
         self.counter, self.histories = state['counter'], state['histories']
+        self.episode_length_buf = state['episode_length_buf']
 
     def restore_arm_observation_cache(self, cache):
         cache['obs_history'] = self.histories['arm']
@@ -150,6 +156,7 @@ def test_stage_order_four_optimizers_and_exact_cpu_resume(tmp_path):
     expected_dog, expected_arm = deepcopy(runner.dog_model.state_dict()), deepcopy(runner.arm_model.state_dict())
     fresh = RoboDuetRunner(ProtocolEnv(cfg), cfg)
     fresh.load(path)
+    torch.testing.assert_close(fresh.env.episode_length_buf,env.episode_length_buf,rtol=0,atol=0)
     assert fresh.next_iteration == 1 and fresh.stage == 2
     assert fresh.arm_update_count == 0
     assert fresh.run_iteration() == expected
@@ -164,6 +171,24 @@ def test_stage_order_four_optimizers_and_exact_cpu_resume(tmp_path):
     assert payload['arm_update_count'] == 1
     assert payload['torch_rng'].dtype == torch.uint8 and payload['torch_rng'].device.type == 'cpu'
     assert any(not torch.equal(arm_before[k],v) for k,v in fresh.arm_model.state_dict().items())
+
+
+def test_fresh_episode_age_matches_actual_seeded_upstream_equation():
+    from types import SimpleNamespace
+    from pawcerto.methods.roboduet.training.isaac_env import RoboDuetIsaacTrainingEnv
+    tree = ast.parse((SOURCE/'__init__.py').read_text())
+    learn = next(node for node in ast.walk(tree) if isinstance(node,ast.FunctionDef) and node.name == 'learn')
+    assignment = learn.body[0].body[0]
+    code = compile(ast.Module(body=[assignment],type_ignores=[]),str(SOURCE/'__init__.py'),'exec')
+    reference = SimpleNamespace(episode_length_buf=torch.zeros(4096,dtype=torch.long),max_episode_length=1000)
+    actual = SimpleNamespace(task=SimpleNamespace(episode_length_buf=torch.zeros(4096,dtype=torch.long),max_episode_length=1000))
+    torch.manual_seed(123)
+    exec(code,dict(torch=torch,self=SimpleNamespace(env=reference)))
+    reference_rng = torch.get_rng_state()
+    torch.manual_seed(123)
+    RoboDuetIsaacTrainingEnv.randomize_episode_lengths(actual)
+    torch.testing.assert_close(actual.task.episode_length_buf,reference.episode_length_buf,rtol=0,atol=0)
+    assert torch.equal(torch.get_rng_state(),reference_rng)
 
 
 def test_actual_task_observer_controller_wiring_with_static_state_fixture(tmp_path):
@@ -198,7 +223,7 @@ def test_actual_task_observer_controller_wiring_with_static_state_fixture(tmp_pa
             self.q[ids],self.pose[ids],self.velocity[ids] = joint_pos,root_pose,root_velocity
             self.qd[ids]=0
         def joints(self): return self.q,self.qd
-        def step_control(self,leg_torque,arm_target):
+        def step_control(self,leg_torque,arm_target, *, capture_state=True):
             assert leg_torque.shape == (5,12) and arm_target.shape == (5,8)
         def state(self):
             body_pos = torch.zeros(5,6,3)

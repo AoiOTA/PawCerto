@@ -5,8 +5,7 @@ import sys
 import xml.etree.ElementTree as ET
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-import runpy
-source_tree = runpy.run_path(str(ROOT / 'pawcerto/mujoco/roboduet_asset.py'))['source_tree']
+from pawcerto.robots.go1_arx5 import source_tree
 from isaaclab.app import AppLauncher
 parser = argparse.ArgumentParser()
 parser.add_argument('--output', type=Path, default=ROOT / 'reference/isaac/go1_arx5')
@@ -37,13 +36,34 @@ try:
         usd_file_name='robot.usd', force_usd_conversion=True, fix_base=False, merge_fixed_joints=False,
         replace_cylinders_with_capsules=True, self_collision=True,
         joint_drive=UrdfConverterCfg.JointDriveCfg(target_type='none')))
-    from pxr import Usd, UsdGeom, UsdPhysics
+    from pxr import Usd, UsdGeom, UsdPhysics, PhysxSchema
     stage = Usd.Stage.Open(converter.usd_path)
     for prim in stage.Traverse():
         if prim.IsA(UsdGeom.Cylinder) and prim.HasAPI(UsdPhysics.CollisionAPI):
             prim.SetTypeName('Capsule')
     stage.GetRootLayer().Save()
+    # Author the runtime collision offsets in the generated shared geometry
+    # layers. Editing every cloned instance would remove geometry sharing and
+    # exhaust host RAM at the original 4096-environment training scale.
+    output_root = args.output.resolve()
+    for layer in stage.GetUsedLayers():
+        if not layer.realPath or not Path(layer.realPath).resolve().is_relative_to(output_root):
+            continue
+        layer_stage = Usd.Stage.Open(layer)
+        changed = False
+        for prim in layer_stage.Traverse():
+            if prim.HasAPI(UsdPhysics.CollisionAPI):
+                collision = PhysxSchema.PhysxCollisionAPI.Apply(prim)
+                collision.CreateContactOffsetAttr(.01)
+                collision.CreateRestOffsetAttr(0.)
+                changed = True
+        if changed:
+            layer.Save()
     (args.output / 'usd_path.txt').write_text(converter.usd_path + '\n')
     print('ROBODUET_USD', converter.usd_path, flush=True)
+except BaseException:
+    import traceback
+    traceback.print_exc()
+    raise
 finally:
     launcher.app.close(exit_code=int(sys.exc_info()[0] is not None))
