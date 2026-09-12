@@ -190,3 +190,30 @@ class StockSolverForce:
         result = self.masses[..., None] * (reported_acceleration - free_acceleration)[..., :3]
         _finite(solver_force_residual=result)
         return result
+
+    @torch.no_grad()
+    def approximate_sensor_wrench(self, reported_acceleration, free_acceleration, *,
+                        link_rotation, com_offset_b, applied_force_w):
+        """Experimental solver residual plus applied force at COM, PRE body axes.
+
+        Reported alpha contains free alpha plus solver delta-w/dt. Subtraction
+        removes FD gyro already: no second omega cross I omega is added. Use
+        PRE COM inertia and shift the COM moment to the body origin.
+        This is a sensor-equivalence hypothesis, not a production force mode.
+        """
+        shape = (*self.masses.shape, 3)
+        if (reported_acceleration.shape != (*self.masses.shape, 6)
+                or link_rotation.shape != (*self.masses.shape, 3, 3)
+                or com_offset_b.shape != shape or applied_force_w.shape != shape):
+            raise ValueError("Incomplete six-axis PRE wrench inputs")
+        _finite(link_rotation=link_rotation, com_offset_b=com_offset_b, applied_force_w=applied_force_w)
+        force_w = self.residual_force(reported_acceleration, free_acceleration) + applied_force_w
+        inertia_w = link_rotation @ self.body_inertias @ link_rotation.transpose(-1, -2)
+        moment_w = (inertia_w @ (reported_acceleration-free_acceleration)[..., 3:, None]).squeeze(-1)
+        lever_w = (link_rotation @ com_offset_b[..., None]).squeeze(-1)
+        moment_w = moment_w + torch.linalg.cross(lever_w, force_w)
+        world = torch.stack((force_w, moment_w), dim=-1)
+        body = link_rotation.transpose(-1, -2) @ world
+        result = torch.cat((body[..., 0], body[..., 1]), dim=-1)
+        _finite(residual_wrench=result)
+        return result
