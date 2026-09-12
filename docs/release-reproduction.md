@@ -135,3 +135,26 @@ inventories are retained in `outputs/release-reproduction-20260912/`. Existing
 environments and caches remain intact. The source is a local candidate, not a
 fetched public PawCerto release. Empty-cache checks are parallel release work;
 routine research uses the already verified environments.
+
+## UniFP and Learning Force Control source package, 2026-09-13
+
+Source commit `b4379a55b96d0a706bd6770528eff8ce448b8e4d` was archived from Git,
+built into a wheel without dependency resolution, and unpacked outside the
+checkout. An isolated Python process imported seven new UniFP/LFC modules
+from that unpacked wheel and consumed the existing exported policies. Required
+method license files and UniFP runtime/training sources were present.
+
+The wheel consumer ran all 500 saved UniFP Lab input histories; its maximum
+action difference from saved Lab outputs was 4.172325e-7, within the recorded
+tolerance. LFC consumed three zero histories and returned finite 19-value
+actions using the explicitly local initialized policy. This does not make it
+an author-trained checkpoint. Both build and consumption exited 0.
+
+The wheel contains 106 entries and is 263,668 bytes, SHA-256
+`905f226a7216dd9f90cd385168600d7fe4e79b9f618ea7dce59f543f57a016c3`.
+Commands, logs and validation are under
+`outputs/framework-package-unifp-lfc-20260913/`. This is exact-commit source
+packaging and CPU consumption evidence. It is not a fresh Lab installation,
+new physical validation, release publication or completion of the remaining
+methods. The separate UniFP report retains the roll termination and the
+training/evaluation physical-property difference.
