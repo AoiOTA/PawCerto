@@ -13,7 +13,7 @@ Robot support means a measured method/robot/runtime combination, not just a load
 | Go2 + ARX5 | UMI-on-Legs | Actual training, Isaac Lab/MuJoCo evaluations and policy export; retain the reported stability and generalization limits |
 | Go1 + ARX5 | RoboDuet | Actual Stage 1/2/resume, export and fixed physical evaluation; early 0/1600 comparison shows no learning improvement; 10001/50000 endpoints pending |
 | Go1 + WidowX 250s | DeepWBC | Corrected full-terrain 21 updates and 500 policy steps in physical simulation; actual-input CPU export consumption; EE RMSE 0.47936 m and one signed-roll failure; learning unproved |
-| AS2 EDU + Piper H with stock gripper | UMI target-body adaptation | Shared-geometry repair preserves all 601 nominal control rows; full 4096 × 24 × 4000 run active, actual model 0 fixed16 completes 16/16 with 0.51053 m / 1.63250 rad error; learning and final transfer pending |
+| AS2 EDU + Piper H with stock gripper | UMI target-body adaptation | Shared-geometry repair preserves all 601 nominal control rows; full 4096 × 24 × 4000 run active, actual model 0 fixed16 completes 16/16; [model 500](as2-umi-model500-evaluation.md) has 13 numerical failures and three complete but inverted cases; final learning and transfer pending |
 | B2 + Z1 | UniFP, after the priority milestone | Original-source CPU integration; Isaac Lab execution pending |
 | B1 + Z1 | Learning Force Control, later expansion | Planned integration |
 

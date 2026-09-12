@@ -107,7 +107,7 @@ The GPU operator owns the service and resource allocation; the command is not au
 
 The full run's actual `model_0.pt` was independently evaluated with the fixed16 command and exited 0: all 16 cases completed 17 seconds, with zero numerical failures, inverted cases or sampled nonfoot-contact cases above 1 N. Mean EE error is 0.5105255 m / 1.6324972 rad; mean ground-supported feet is 3.941696 and zero-support endpoints are 1.0601%. Every saved target exactly equals the frozen fixed16 array, and every saved numeric array is finite.
 
-The checkpoint records iteration 0, zero transitions and 4096 environments. Its SHA-256 is `2f8a8b5519edc062486a994a023c4af267ee17a9b19b49c7a81900ebdd2e7718`. Actual tensor comparison found its entire model state equal to the earlier one-environment model 0, explaining the identical rollout metrics; this equality was measured rather than inferred from seed equality. The formal comparison uses this new run's checkpoint and artifacts: `runs/as2_umi_seed0_4096_4000_fixed16_0/{summary.json,fixed16-audit.json,case_*.json,case_*.npz}`. Model 500, model 4000 and final Lab/export results remain pending.
+The checkpoint records iteration 0, zero transitions and 4096 environments. Its SHA-256 is `2f8a8b5519edc062486a994a023c4af267ee17a9b19b49c7a81900ebdd2e7718`. Actual tensor comparison found its entire model state equal to the earlier one-environment model 0, explaining the identical rollout metrics; this equality was measured rather than inferred from seed equality. The formal comparison uses this new run's checkpoint and artifacts: `runs/as2_umi_seed0_4096_4000_fixed16_0/{summary.json,fixed16-audit.json,case_*.json,case_*.npz}`. Model500 has since been evaluated as described below; model4000 and final Lab/export results remain pending.
 
 ## Fixed checkpoints: 0, 500 and 4000
 
@@ -154,6 +154,14 @@ test "$as2_eval_status" -eq 0
 Verify each output's saved sampled targets equal the corresponding case in `runs/as2_umi_seed0_4096_4000_fixed16_0/fixed16_targets.npz` before making paired comparisons; identical seeds alone do not certify unchanged inputs. The evaluator retains invalid numerical prefixes separately, reports complete-case denominators and exits 2 for an incomplete batch. Preserve that exit and failure detail. An exception before any valid prefix also remains a failure; do not relabel a shorter rollout as a complete 17-second case. If complete subsets differ, show per-case outcomes and compare shared elapsed prefixes separately from complete-episode statistics; never hide failures by averaging only the convenient cases.
 
 At all three points report position **and** orientation error, full-case count, inversion, root height/up-dot, ground versus net support, nonfoot contacts and numerical failures. Use the saved `physical` columns for root translation/rotation, arm joint motion, targets and TCP motion to describe leg/arm behavior; base motion alone does not establish coordinated control. Preserve all cases, including checkpoint 500 if checkpoint 4000 regresses. A favourable training reward or finite PPO update is not the outcome; the report must make the tracking/support/contact tradeoff explicit. No new binary tracking-success threshold is introduced here.
+
+## Observed model500 result
+
+The actual model500 fixed16 MuJoCo command exited **2**: **13/16 numerical failures (`mjWARN_BADQACC`)**, with only cases **1, 6 and 9** completing 17 seconds; all three inverted. Every target matches the frozen input, and unchanged config/model/runtime identities were checked. The preserved finite prefixes remain invalid episodes.
+
+On the **same three complete cases only**, mean EE error increases from model0's 0.563450 m / 1.642654 rad to model500's 5.391835 m / 2.069168 rad; mean ground-supported feet drops from 3.941107 to 0.298783. These are not overall fixed16 means. The [model500 result](as2-umi-model500-evaluation.md) gives all 16 matched-prefix rows, support/contact limits and existing training-side context. Artifacts are `runs/as2_umi_seed0_4096_4000_fixed16_500/{summary.json,fixed16-audit.json,model0-paired-comparison.json,case_*.json,case_*.npz}`.
+
+Training-side iteration500 reports 0.0611876 m / 0.4501084 rad aggregate EE error and 136 `done` events over 24 policy steps, with no inversion-specific or termination-cause breakdown. This is a different stochastic training protocol; the discrepancy alone does not establish its cause. There is no authorized model500 early-stop threshold. Continue the unchanged single candidate to 4000 and retain this negative intermediate result.
 
 ## Final Lab fixed-policy comparison and export
 

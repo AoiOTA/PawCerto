@@ -173,7 +173,10 @@ export. The actual 4096-environment run's model 0 baseline completed 16/16 full
 17-second cases with no numerical failure or inversion, but mean tracking error
 was 0.51053 m / 1.63250 rad. Its entire model state was measured equal to the
 older one-environment baseline; the formal comparison still uses the new run's
-own checkpoint. Model 500/4000 and final Lab/export results remain pending.
+own checkpoint. The [model 500 fixed16 evaluation](as2-umi-model500-evaluation.md)
+completed with 13 numerical failures and three full but inverted cases.
+The single candidate continues to its specified 4000 endpoint; model 4000
+and final Lab/export results remain pending.
 No extra seeds, reward search, extended training or hardware execution are
 automatically included. A robot-name change, completed batch or successful
 asset load is not a completed learned transfer.
