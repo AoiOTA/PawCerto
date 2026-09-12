@@ -2,9 +2,20 @@
 
 The paper's 17 effective controls are not this revision's 19-output policy ABI.
 """
+from copy import deepcopy
 from .actor_critic import AC_Args
 
 SOURCE_REVISION = 'c760e1d74ad165d3c069d4f57ab5d066f6a41eb6'
+
+
+def network_config(full_config):
+    """Resolve the network actually consumed by the training and export paths."""
+    env = full_config['env']['env']
+    return {'num_obs': env['num_observations'],
+            'num_privileged_obs': env['num_privileged_obs'],
+            'num_obs_history': env['num_observations'] * env['num_observation_history'],
+            'num_actions': env['num_actions'],
+            'policy': deepcopy(full_config['policy'])}
 
 
 def training_config():

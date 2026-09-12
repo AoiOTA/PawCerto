@@ -15,7 +15,7 @@ Robot support means a measured method/robot/runtime combination, not just a load
 | Go1 + WidowX 250s | DeepWBC | Corrected full-terrain 21 updates and 500 policy steps in physical simulation; actual-input CPU export consumption; EE RMSE 0.47936 m and one signed-roll failure; learning unproved |
 | AS2 EDU + Piper H with stock gripper | UMI target-body adaptation | Completed 4096 × 24 × 4000 candidate; [final result](as2-umi-learning-result.md): Lab tracking improves with 7/16 inversions and degraded support; MuJoCo 16/16 BADQACC, zero complete cases; export consumption fails |
 | B2 + Z1 | UniFP | Official Lab 20+1 updates, separate strict force-stage probe, 500 exported-policy-driven steps and real-input CPU consumption; one roll reset, EE error 0.458129 m; training/evaluation rigid-property difference retained; learning unproved |
-| B1 + Z1 | Learning Force Control | Fixed-source 19-output CPU network/PPO and raw-checkpoint/two-JIT parity; random initialization only, author weights not obtained; simulator and learned behavior unverified |
+| B1 + Z1 | Learning Force Control | Official Lab 20+1 updates, actual 19-output/native-position-drive semantics and zero-update probe recovery; 500×16 finite JIT transitions and all-input CPU parity, four orientation resets and 0.821928 m position-mode EE error; author weights not obtained and learned force control unproved |
 
 Go2 + Airbot Play (MLM) remains conditional on missing author training material.
 Spot + arm (ReLIC) is an optional research integration subject to its original
@@ -47,11 +47,18 @@ dependency. The completed 21-update and 500-step check does not authorize anothe
 run or full force-stage training. Its runtime report preserves the failed
 post-checkpoint probe and training-time gripper-property gap.
 
-For Learning Force Control, follow [source acquisition and CPU checkpoint/export](learning-force-control-implementation.md).
-Use the resolved configuration with strict raw-state loading and the matching
-two-file JIT pair. The demonstrated checkpoint is initialized from original
-source, not author-trained weights. That CPU entry does not supply a simulator;
-URDF and referenced-license gaps remain at their documented owners.
+For Learning Force Control, start with [the integration guide](learning-force-control.md),
+then [official Lab training/resume](learning-force-control-lab.md) and
+[full-checkpoint export/evaluation](learning-force-control-evaluation.md).
+The historical [CPU raw-checkpoint entry](learning-force-control-implementation.md)
+still requires the resolved config and matching two-file JIT pair; full training
+checkpoints use the separate exported contract. Author weights were not obtained.
+The actual task uses 19 network outputs and native position drives. The bounded
+20+1 update execution and recovered post-save probe do not establish learned
+force control. The completed fixed evaluation has four orientation resets and
+poor tracking despite all-input export parity; its initial zero-consumption
+reset failure remains preserved. The bounded assignment is closed. Preserve the documented source
+measurement/force-body distinction and derived asset/license provenance.
 
 ## 1. Run the existing path
 

@@ -1,0 +1,36 @@
+# Learning Force Control: official B1/Z1 physics port
+
+The runtime uses official unmodified Isaac Lab/PhysX. Its input is the pinned `Improbable-AI/learning-compliance@c760e1d74ad165d3c069d4f57ab5d066f6a41eb6` B1/Z1 URDF. This document records ongoing implementation and actual probes; it is not learning acceptance.
+
+## Active source task
+
+`training.config.default_config()` resolves the base, B1/Z1 and released `train.py` assignments. The default has **19 policy actions and 19 movable joints**, `.005 s` physics steps and four substeps per policy step. It sends position targets through native implicit POS drives; the separately computed source PD torque tensor is not submitted in this mode. Training owns action clipping, lag, index 18 forced action `-.1`, commands, external force springs, observations, rewards and PPO. Index 17 is overwritten only by the disabled teleoperation path.
+
+The released `add_balls=False` creates no door or ball actor. `inverse_IK_door_opening` is a command-distribution selection and does not load a door. The physical terrain is the full 20 × 20 grid of 5 m triangle-mesh tiles: Perlin roughness `[0,.25]`, ground friction `[0,.01]`, source restitution distribution and 3 m outer heightfield border. The 9-slot default terrain distribution selects no stair/slope branch in `TMBoxTerrain.prepare`; Perlin roughness remains active. Each tile retains its own material. This is not a flat-plane substitute.
+
+## Asset and runtime
+
+`python scripts/convert_learning_force_control_usd.py --visualizer none --device cuda:0` writes `reference/isaac/b1_z1/usd_path.txt`. The original fetched blob is never modified. Derived XML receives the missing xacro namespace, removes three unused xacro includes referring to absent files, resolves mesh paths, and renames the second duplicate `silver` material definition. The first original material reference retains its definition. The duplicate material caused an actual importer error before repair.
+
+The official fixed-joint merger respects feet marked `dont_collapse`; merged mass/inertia transformations use the importer. Collision cylinders are converted to capsules as requested by the source. Contact/rest offsets are authored in shared geometry layers before cloning, avoiding clone-specific geometry expansion. Rigid-body properties are applied directly through public PhysxRigidBodyAPI, including the instance root gripperMover, which the generic recursive modifier skipped in the actual probe. Gazebo sensor/plugin tags remain in the derived URDF but are not launched by Isaac Lab; training orientation derives from rigid-body pose and contact uses official ContactSensor APIs. Source limits, inertial frames and native drive gains/effort limits are retained.
+
+An actual original Gym actor probe proves both the untouched URDF and syntax-only derived input produce the same 24 bodies, 19 joints and masses. `find_actor_rigid_body_handle("gripperStator")` returns `-1`; `link06` returns 22. The source therefore measures its final body, `gripperMover`, through Python negative indexing. The default port preserves this observed executable behavior by explicitly naming `gripperMover` as `ee_measurement_id` and `link06` as force `ee_id`, independent of Lab body ordering. It does not claim this was the authors' intent. A provisional extra fixed-body asset was rejected and removed; the accepted conversion retains the original collapse behavior. No virtual FK point replaces the source default measurement.
+
+`B1Z1Isaac` exposes source-order joint tensors and world-space `xyzw` root/body state through `read_state()`. `step(position_target, torques=None, world_forces=None)` advances one physics substep. Forces are sent with the public global-frame wrench composer at each body's center of mass, matching the source applied-force tensor interface. Contact readout sums native normal contact and filtered tangential force; known externally applied force remains distinct from contact. `dof_force` reads native projected joint force from the PhysX view; its correspondence to Gym measured DOF forces has not been established. It is not the implicit actuator's estimated PD effort.
+
+`write_reset(ids,dof_pos,root_state,dof_vel=None)` accepts world root state. Material, mass, COM, gravity and actual drive gain setters are public runtime APIs. Training is responsible for applying only source-active randomization; random factors affecting an unused computed-torque branch must not silently alter POS drives.
+
+## Actual evidence so far
+
+- Python compilation passed for asset, converter, terrain and runtime.
+- First official conversion failed on duplicate `silver`; a derived-only syntax repair led to successful conversion, recorded by the single device operator.
+- First 1-environment physics probe failed during contact initialization because a single filter expression matched 400 terrain shapes. Enumerating the 400 actual tile paths resolved this; the next 12-substep probe completed with finite state and nonzero native projected DOF force. Its 24 body masses agree with the original Gym actor within 1.2e-7 kg. This short probe remained airborne (zero contacts), so it does not establish contact tracking. The final property/resume readback probe completed: all 24 bodies report zero linear/angular damping and 1 m/s maximum depenetration velocity. Restore errors are at most 5.96e-8 for root state and body-frame inertia, and zero for joint state, COM, mass, material, gravity, time and static terrain tensors.
+- No optimizer steps or training results are claimed here. All simulation execution is assigned to the sole device operator.
+
+Probe source and results are under `artifacts/learning-force-control-physics`; full execution logs and immutable script snapshots are under `outputs/learning-force-control-execution-20260913`.
+
+`training_state()`/`load_training_state()` preserve root/joint states, mass, inertia, COM, materials, gravity and time. The static terrain must be recreated with the same original construction RNG; saved height/material tensors are compared on restore. PhysX solver warm-start/contact caches are not exposed and are not checkpointed. This supports continued training, not bitwise physical replay.
+
+A real restore defect was detected despite a successful process exit: writing inertia before the saved COM principal-axis frame produced 0.037 kg m² error. The public PhysX API diagonalizes inertia and updates that frame. Restoring COM before inertia resolved the error in the subsequent actual probe; the probe now asserts inertia readback instead of treating exit status alone as acceptance.
+
+Final asset pointer: `reference/isaac/b1_z1/usd_path.txt` → `reference/isaac/b1_z1/merged_1/merged.usda` in this checkout. The converter chooses a new subdirectory when its previous output exists, so consumers follow the pointer. Actual commands were the conversion command above, existing Gym Python on `artifacts/learning-force-control-physics/gym_body_probe.py`, and official Lab Python on `artifacts/learning-force-control-physics/probe.py --visualizer none --device cuda:0`. The single device operator executed all of them; `physics-probe-attempt4.log` records the final passing run. The training environment owner can now consume this runtime; no additional optimizer budget was used by these probes.

@@ -4,8 +4,8 @@ Current priority: complete the authorized RoboDuet learning and evaluation run.
 The AS2 EDU/Piper H one-candidate experiment has ended with failed stable-control
 and transfer results; no further AS2 experiment is automatically included. DeepWBC's bounded 21-update/export/500-step path and source
 delivery are complete; its learning outcome remains unproved. Hardware execution
-remains outside scope. UniFP's bounded Lab integration and Learning Force Control's
-CPU integration are complete at the evidence levels below; full force-control
+remains outside scope. UniFP and Learning Force Control now have bounded Lab
+integration at the evidence levels below; full force-control
 learning and the remaining method integrations are unfinished.
 See [the updated sequence](project-plan.md#updated-execution-priority-2026-09-12).
 
@@ -38,15 +38,31 @@ the repaired runtime, so training/evaluation physics are not claimed identical.
 This is bounded integration, not learned force control. See [runtime evidence](unifp-lab-runtime.md)
 and [evaluation/export](unifp-evaluation.md).
 
-Learning Force Control on B1/Z1 has [CPU source and checkpoint integration](learning-force-control-implementation.md):
-181 verified source blobs, three CPU parity tests and original random-initialized
-raw-checkpoint/two-JIT consumption with maximum output error zero. The actual
-fixed source ABI has 19 outputs; the paper's 17-control description does not
-change that ABI. Anonymous W&B lookup returned `project:null` and did not obtain
-author weights. Unbound URDF xacro elements and missing referenced licenses
-remain specific simulator/environment and recurrent-helper limitations; they
-do not invalidate the delivered nonrecurrent CPU path. No LFC simulation,
-learned policy performance or hardware acceptance is established.
+Learning Force Control on B1/Z1 now has [official Lab integration](learning-force-control.md)
+in addition to the historical 181-blob-verified CPU source/checkpoint delivery.
+The 16-environment, 48-step, 20-update run exited 0; independent resume saved
+model 21 at 16,128 training transitions before a post-save force-probe failure
+exited 1. The inference-context repair was exercised separately with zero
+optimizer updates. The corrected [500-step, 16-environment evaluation](learning-force-control-evaluation.md)
+exited 0 with all 8,000 transitions finite and actually JIT-driven, four
+body-orientation resets and exact device-side checkpoint/JIT parity. Position-
+mode EE error was 0.821928 m; force-mode XYZ component RMS was 40.852856 N
+(48.492836 N for constrained force-mode samples). These forces are known applied
+spring/external forces, not independent wrist/contact measurements. Independent
+CPU consumption of all 8,000 histories matched CPU checkpoint outputs exactly
+and saved GPU outputs within the combined tolerance. The first evaluation
+failed during reset before any JIT consumption because the evaluator mapped
+velocity limits to nonexistent source keys; the corrected attempt completed
+the missing evaluation without another optimizer update. Both failures remain
+preserved. The bounded assignment is closed without a learning-success claim. The fixed source ABI retains 19 outputs and native
+position drives; computed source PD tensors are not submitted drive efforts.
+Original Gym lookup `gripperStator=-1` measured the last body, `gripperMover`;
+the port binds it explicitly while applying force to `link06`.
+Derived-only xacro/duplicate-material repairs and upstream license provenance
+now support the runtime port. Anonymous W&B lookup did not obtain author
+weights. Neither bounded updates nor a recovered probe establishes learned
+force control, exact cross-engine physics or hardware acceptance.
+
 
 The [approved continuation plan](project-plan.md) starts from the completed
 three-seed UMI baseline. On 2026-09-12 the user selected seed-matched tracking

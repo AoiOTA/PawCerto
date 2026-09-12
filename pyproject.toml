@@ -22,6 +22,6 @@ namespaces = true
 "pawcerto.methods.umi_on_legs" = ["LICENSE"]
 "pawcerto.methods.roboduet" = ["LICENSE", "LICENSES/*/LICENSE"]
 "pawcerto.methods.unifp" = ["LICENSE", "LICENSES/*/LICENSE"]
-"pawcerto.methods.learning_force_control" = ["LICENSE"]
+"pawcerto.methods.learning_force_control" = ["LICENSE", "LICENSES/*/LICENSE", "LICENSES/PROVENANCE.md"]
 "pawcerto.methods.deepwbc" = ["LICENSE"]
 "pawcerto.methods.deepwbc.training" = ["LICENSE"]

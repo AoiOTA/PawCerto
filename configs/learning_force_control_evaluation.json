@@ -1,0 +1,6 @@
+{
+  "commands": [0.3, 0.0, 0.0],
+  "ee_goal_lpy": [0.6, 0.0, 0.0],
+  "ee_timing_s": 2.0,
+  "hybrid_mode": "binary"
+}
