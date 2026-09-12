@@ -61,11 +61,25 @@ physical randomization, pushes, force schedules, rewards and automatic resets
 remain those of the saved configuration. These explicit evaluation overrides
 are recorded alongside the complete resulting configuration.
 
-The saved `global_steps` is set before the original reset warmup, which performs
-one zero-action policy step and increments the counter. A 21-update checkpoint
-does not reach the strict force-stage boundary `global_steps > 8000 * 24`.
-Any separate check that places the counter near this boundary is a stage
-execution probe, not evidence of having trained through 8000 updates.
+`--start-stage checkpoint` (default) restores the saved `global_steps` before
+the original reset warmup. `--start-stage pre-force` starts that evaluation
+counter at zero; `--start-stage force` starts it at
+`cfg.commands.force_start_step * 24 + 1`, satisfying the original strict `>`
+force-stage condition. These choices change only the evaluation start counter,
+never the checkpoint, configuration or training progress. Reset warmup performs
+one zero-action policy step and increments the counter; subsequent steps keep
+advancing the original schedule. Thus `pre-force` is a start phase, not a
+permanent force-disable switch: a sufficiently long run crosses the threshold.
+With the original threshold of 192000, its 500 recorded steps remain pre-force.
+Force-enabled execution can initially sample zero during the original ramp;
+that does not mean the force stage is disabled.
+
+For initial model 0 versus trained model 60000 force-control comparisons, pass
+`--start-stage force` to both commands with the same task and seed. This matches
+the starting phase; policy-dependent terminations and resets can still produce
+different per-step force histories. Force sampling, ramping and controller
+equations remain unchanged. Starting a checkpoint in the force phase is an
+evaluation condition, not evidence it trained through that phase.
 
 When an export is supplied, the actual simulation uses its actions. Both action
 and estimator outputs are also compared with the checkpoint model on those
@@ -75,7 +89,10 @@ checkpoint; no latest-checkpoint selection is implicit.
 ## Records and interpretation
 
 `metadata.json` records the command, checkpoint and asset identities, seed,
-configuration, fixed task and overrides. `trajectory.npz` preserves each policy
+configuration, fixed task and overrides. Both `checkpoint_global_steps` and
+`evaluation_start_global_steps` (before reset warmup) are recorded, together
+with `evaluation_start_stage` and the strict force threshold. CPU preflight
+records the same fields. `trajectory.npz` preserves each policy
 input, estimate and training supervision, raw actions, joint/root states,
 applied torques, commands, goals, contact forces, known injected forces and
 pre-reset termination reasons. The original gripper force buffer is the
@@ -103,7 +120,17 @@ TorchScript action/estimator reload for several batch sizes. Two additional
 failure-accounting regression tests passed for mixed valid/invalid environment
 transitions and reset failure before export consumption.
 
-The frozen model 21 then completed the prescribed 500-step Lab execution with
+The evaluation start-phase CPU check also passed on 2026-09-13. Three CLI
+preflights consumed the existing model 21 and `configs/unifp_evaluation.json`:
+default / pre-force / force start counters were 505 / 0 / 192001, while all
+three retained checkpoint counter 505 and the same resolved configuration.
+`outputs/unifp-evaluation-stage-cpu-20260913/comparison.json` records this input
+and metadata proof. The three evaluation unit tests passed, including the
+source strict threshold and existing failure accounting. No new physical
+rollout was performed for this change.
+
+Before this stage-selection change, the frozen model 21 completed the prescribed
+500-step Lab execution with
 all 500 transitions finite and driven by the exported policy. Action and
 estimator parity on those same GPU inputs had maximum error 0. One roll
 termination triggered the original reset. Mean EE error was 0.458129 m,

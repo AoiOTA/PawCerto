@@ -96,9 +96,12 @@ together. Exported policies must drive the physical evaluation and match
 independent CPU consumers on the actual saved inputs. These are intended
 comparisons, not new claims that a current short run has already passed them.
 
-UniFP needs explicit evaluation-start phase selection for the initial/final
-force comparison: blindly restoring each checkpoint's training counter would
-change external-force enablement between models. Matching stage and seed does
+UniFP's [evaluation entrypoint](unifp-evaluation.md) now provides explicit
+evaluation-start phase selection for the initial/final force comparison:
+blindly restoring each checkpoint's training counter would change external-force
+enablement between models. Actual model-21 CPU preflights verified saved / zero /
+strict-threshold-plus-one start counters without changing the checkpoint or
+resolved configuration; no new physical rollout is claimed. Matching stage and seed does
 not imply identical later force histories when policies reset at different
 times. The original source sampling, ramps and clock progression must remain
 visible in the evaluation record.

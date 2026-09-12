@@ -9,7 +9,31 @@ from unittest.mock import patch
 import numpy as np
 import torch
 
-from pawcerto.methods.unifp.evaluation import evaluate_fixed_policy
+from pawcerto.methods.unifp.evaluation import evaluate_fixed_policy, evaluation_start_global_steps
+from pawcerto.methods.unifp.history import force_stage_active
+from pawcerto.methods.unifp.training.config import default_config, resolve_config
+
+
+class UniFPEvaluationStageTests(unittest.TestCase):
+    def test_start_choices_retain_strict_source_boundary_and_config(self):
+        config = default_config()
+        original = json.dumps(config, sort_keys=True)
+        cfg = resolve_config(config)
+        threshold = cfg.commands.force_start_step * 24
+        for saved in (504, threshold, threshold + 100):
+            self.assertEqual(evaluation_start_global_steps(saved, config), saved)
+            self.assertEqual(evaluation_start_global_steps(saved, config, 'checkpoint'), saved)
+            self.assertEqual(evaluation_start_global_steps(saved, config, 'pre-force'), 0)
+            forced = evaluation_start_global_steps(saved, config, 'force')
+            self.assertEqual(forced, threshold + 1)
+            self.assertTrue(force_stage_active(forced, cfg))
+        self.assertFalse(force_stage_active(threshold, cfg))
+        self.assertTrue(force_stage_active(threshold + 1, cfg))
+        # One warmup step, then 500 recorded physics counters: 1..500.
+        self.assertFalse(force_stage_active(500, cfg))
+        self.assertEqual(json.dumps(config, sort_keys=True), original)
+        with self.assertRaises(ValueError):
+            evaluation_start_global_steps(504, config, 'invalid')
 
 
 class UniFPEvaluationAccountingTests(unittest.TestCase):

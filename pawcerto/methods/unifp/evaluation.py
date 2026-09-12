@@ -12,6 +12,17 @@ from .math import quat_apply
 REASONS = ('termination_contact', 'pitch', 'roll', 'timeout')
 
 
+def evaluation_start_global_steps(checkpoint_global_steps, config, stage='checkpoint'):
+    """Choose only the pre-reset start counter; the source schedule keeps advancing."""
+    if stage == 'checkpoint':
+        return checkpoint_global_steps
+    if stage == 'pre-force':
+        return 0
+    if stage == 'force':
+        return config['env']['commands']['force_start_step'] * 24 + 1
+    raise ValueError(f'Unknown evaluation start stage: {stage}')
+
+
 def fixed_task_config(config, task, *, num_envs=1):
     required = {'commands', 'ee_goal_lpy', 'traj_time_s', 'hold_time_s'}
     if set(task) != required:

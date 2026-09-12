@@ -19,6 +19,8 @@ def main(argv=None):
     parser.add_argument('--steps', type=int, required=True)
     parser.add_argument('--num-envs', type=int, default=1)
     parser.add_argument('--seed', type=int, default=0)
+    parser.add_argument('--start-stage', choices=('checkpoint', 'pre-force', 'force'), default='checkpoint',
+                        help='Evaluation start phase before reset: saved counter (default), zero, or strict force threshold + 1; source schedule continues advancing')
     parser.add_argument('--exported-policy', type=Path, help='Export directory; its actions actually drive the simulator')
     parser.add_argument('--device', default='cuda:0')
     parser.add_argument('--headless', action=argparse.BooleanOptionalAction, default=True)
@@ -30,7 +32,7 @@ def main(argv=None):
         raise FileExistsError(args.output)
     from pawcerto.artifacts import file_identity
     from pawcerto.methods.unifp.export import load_checkpoint, ExportedUniFP
-    from pawcerto.methods.unifp.evaluation import fixed_task_config, evaluate_fixed_policy
+    from pawcerto.methods.unifp.evaluation import fixed_task_config, evaluate_fixed_policy, evaluation_start_global_steps
     import torch
     torch.set_num_threads(1)
     supplied = json.loads(args.config.read_text()) if args.config else None
@@ -39,6 +41,7 @@ def main(argv=None):
         raise ValueError('Physical evaluation requires the checkpoint global_steps to preserve force-stage timing')
     task = json.loads(args.task.read_text())
     config = fixed_task_config(loaded.config, task, num_envs=args.num_envs)
+    start_global_steps = evaluation_start_global_steps(loaded.global_steps, config, args.start_stage)
     usd = args.robot_usd.resolve(strict=True)
     if usd.suffix == '.txt':
         usd = Path(usd.read_text().strip()).resolve(strict=True)
@@ -57,6 +60,10 @@ def main(argv=None):
     metadata = {
         'method': 'unifp', 'robot': 'b2_z1', 'checkpoint': loaded.identity,
         'checkpoint_iteration': loaded.iteration, 'checkpoint_global_steps': loaded.global_steps,
+        'evaluation_start_stage': args.start_stage,
+        'evaluation_start_global_steps': start_global_steps,
+        'force_stage_threshold_policy_steps': config['env']['commands']['force_start_step'] * 24,
+        'evaluation_stage_semantics': 'counter before reset warmup; source strict > threshold and advancing counter retained; start phase is not a permanent stage override',
         **asset_identity,
         'runtime_source': file_identity(ROOT / 'pawcerto/isaac/unifp_runtime.py'),
         'task_source': file_identity(ROOT / 'pawcerto/methods/unifp/training/isaac_env.py'),
@@ -89,7 +96,7 @@ def main(argv=None):
         terrain = UniFPTerrain(cfg.terrain)
         runtime = B2Z1Isaac(args.num_envs, args.device, usd, cfg, terrain)
         env = UniFPIsaacTrainingEnv(runtime, config)
-        env.global_steps = loaded.global_steps
+        env.global_steps = start_global_steps
         loaded.model.to(args.device)
         if exported:
             exported = ExportedUniFP(args.exported_policy, device=args.device)
