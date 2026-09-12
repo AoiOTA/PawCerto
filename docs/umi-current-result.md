@@ -79,8 +79,8 @@ seed0/1/2 实际结束 **503/507/511** 回合，淘汰最早 **3/7/11** 个；�
 - 包含 `actor.ts`、`config.json`、`joint_names.json`；观测、历史、延迟/缩放和 PD 仍需适配运行时。三个包 actor parity 最大误差均为 0，各自原 checkpoint/导出包在两个独立 17 秒 MuJoCo 进程中七个数组完全一致。该 `sample(1,0)` 检查只证明包消费保持行为，不替代 16 例性能评测，也不证明可直接上实机。
 - 实际环境为 **Isaac Lab develop@412fb31b30ee605b4ffec4327436fc0fe53281d8 + Isaac Sim 6.1.0.0、Python 3.12、Torch 2.11/CUDA 12.8**；这是固定开发快照，不是稳定版标签。独立 CPU 评测使用 MuJoCo 3.13.0。[安装证据与版本](environment-versions.md)
 - 按用户偏好，后续默认已迁移到 **Conda `pawcerto-lab-sim610` / `pawcerto-mujoco`**，直接调用对应 Python。Lab 的同一 seed2 nominal16 实际执行退出 0，849 行十字段与旧环境逐值一致；MuJoCo 的既有 seed0 导出包单例 17 秒实际执行退出 0，七数组及全部结果 JSON 字段逐值一致。历史三种子训练仍属于原 venv 环境，未改写为 Conda；迁移验证不替代正式 16 例评测。[Lab 迁移](../outputs/isaac/conda-runtime-migration/validation.json) · [MuJoCo 迁移](../outputs/mujoco/conda-runtime-migration/validation.json) · [Conda 安装](isaaclab-install.md)
-- **空缓存新机安装未验证**：上游 lock 的 editable 元数据不一致，实际恢复依赖已有 wheel/uv 缓存；wheelhouse 非完整离线包，不能声称已验证一键安装。MJCF 含绝对 mesh 路径，迁移后须重建。[安装限制](environment-versions.md#reusing-the-installed-lab-environment) · [MuJoCo 入口](../pawcerto/mujoco/README.md)
-- `reference/`、`third_party/`、`runs/`、`outputs/` 是**本地证据，不是已随公共仓库发布的资产/结果包**。输入来自固定上游提交及官方数据/权重；下载不增加再分发权利，空目录首次完整获取也未验证。[公开复现边界](../README.md#inputs-and-environments) · [参考环境](reference-runtime.md)
+- **空缓存复现进度**：独立 CPU 环境已从空缓存获取官方代码、数据和权重，生成 MJCF 并完整执行 17 秒，隔离导入与依赖检查通过。Lab 的空缓存安装和实际训练保存／恢复检查仍在进行。此前基于缓存的迁移证据保留，不能与本次新获取混为一项。MJCF 含绝对 mesh 路径，迁移后须重建。[当前复现记录](release-reproduction.md) · [MuJoCo 入口](../pawcerto/mujoco/README.md)
+- `reference/`、`third_party/`、`runs/`、`outputs/` 是**本地证据，不是已随公共仓库发布的资产/结果包**。输入来自固定上游提交及官方数据/权重；本次空目录输入获取已完成，下载不增加再分发权利。[公开复现边界](../README.md#inputs-and-environments) · [参考环境](reference-runtime.md)
 
 ## 主要失败、局限与真实缺项
 
@@ -88,4 +88,4 @@ seed0/1/2 实际结束 **503/507/511** 回合，淘汰最早 **3/7/11** 个；�
 
 当前证据限于**本配置、已有轨迹池上的学习与 sim2sim**。训练和评测均来自公开 tossing 的 101 条轨迹，无独立未见轨迹 holdout；三种子不等于统计充分、未知任务/地形泛化或全身行为全部达标。非足强接触、作者式提前终止/倒置和未验证步态质量仍是局限。其他机器人、RoboDuet/DeepWBC/MLM、ROS 2/VLA、视觉操作与实机不在本阶段。
 
-**结项判断：约定的三种子训练—评测—导出及合并报告已齐，无 seed2 最终数据待补。** 仍缺的是独立未见轨迹泛化、合格步态/接触行为和空缓存新机安装的证明，不能用进程退出 0、无倒置或数值检查补足。本文引用既有结果及验证，不代替独立审查者的原始完整性核验。[最终汇总执行记录](../outputs/mujoco/umi_relaxed_body_speed_three_seed_summary/execution.json)
+**结项判断：约定的三种子训练—评测—导出及合并报告已齐，无 seed2 最终数据待补。** 仍缺的是独立未见轨迹泛化、合格步态/接触行为和完整 Lab 空缓存安装执行证明，不能用进程退出 0、无倒置或数值检查补足。本文引用既有结果及验证，不代替独立审查者的原始完整性核验。[最终汇总执行记录](../outputs/mujoco/umi_relaxed_body_speed_three_seed_summary/execution.json)
