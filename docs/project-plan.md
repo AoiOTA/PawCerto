@@ -257,7 +257,7 @@ are recorded in [the candidate research report](../exa-results/wbc-rl-candidates
 | UniFP | Low-level unified end-effector force/position control | Preserved B2/Z1 task, force estimator, supervision and strict stage transition now have bounded Lab execution and actual-input export parity. Full trained force control, cross-engine equivalence and the separate high-level imitation pipeline remain unverified. |
 | Learning Force Control | Force tracking and variable-compliance baseline | Preserve B1/Z1 and history adaptation. The paper describes 17 effective controls, but the fixed executable source has 19 outputs and native position-drive control. CPU raw/JIT consumption, bounded Lab 20+1 updates and 500×16 actual JIT transitions are exercised; four orientation resets and poor tracking remain despite all-input CPU parity. Derived-only namespace/material repairs and fixed-upstream license provenance support the port. Author weights were not obtained; full learned force control remains unproved. |
 | Multi-critic Twist Tracking | End-effector velocity tracking and separate value learning for leg, arm and contact objectives | Official training code has not been located. Obtain implementation materials or explicitly scope an independent paper-based implementation before coding; do not present its advantages as DeepWBC advantage mixing. |
-| ReLIC | Optional research integration for arm/leg manipulation and changing support roles | An [authored optional external-export CPU adapter](relic-external-export.md) now consumes fixed 84-input/12-output PT/ONNX exports with parity on three synthetic inputs. Full model-based manipulation plus learned support, runtime joint order and the weights' training provenance remain unverified. Noncommercial upstream code/assets/models/license stay external; this does not authorize redistribution or relicensing. |
+| ReLIC | Optional research integration for arm/leg manipulation and changing support roles | An [optional original PLAY runtime](relic-external-runtime.md) now executes the 84-input/12-output export on the full 19-joint Spot, recording actual order and exact source downstream target writes. A finite 500-step run had eight ground-contact terminations; measured tracking and actual-input CPU replay do not establish stable performance or training reproduction. Historical contact equivalence and weights' training provenance remain unknown. Noncommercial upstream files stay external; this does not authorize redistribution or relicensing. |
 | LeggedManip_Lab | Engineering reference for robot configuration, task entrypoints and deployment interfaces | Inspect working consumers and applicable licenses before reusing specific code. Robot configurations do not count as paper-method reproductions, and version compatibility still needs execution evidence. |
 
 The existing UMI → RoboDuet → DeepWBC route remains the near-term sequence;
@@ -267,10 +267,16 @@ Multi-critic and ReLIC can advance when their material and permission
 dependencies are ready, without blocking other methods. Method-specific plans
 must establish their training budgets before starting large runs.
 
-The ReLIC CPU consumer is a bounded compatibility delivery, not full ReLIC
-integration. Its raw leg actor values still require the source downstream
-arm-seven and selected-leg-three target overrides, which it does not implement.
-No new simulation or training budget follows from its numerical agreement.
+ReLIC's optional external runtime completed its bounded 500-step, zero-optimizer
+assignment using the original PLAY task and downstream arm-seven/selected-leg-
+three target overwrites. The actual physical tracking errors and eight contact
+terminations remain part of its result, alongside all earlier failed attempts.
+The original actuator compute path is retained through a local constructor
+bridge; current normal-contact scalars are not proven equivalent to historical
+vector/total-force signals. PLAY's Phase1 inheritance does not identify the
+supplied weights' training phase. Full learning reproduction and stable ReLIC
+performance remain unfinished; this delivery does not authorize further
+simulation, training, redistribution of noncommercial inputs or hardware work.
 
 Evaluate each new capability using its actual commands and execution path:
 force tracking needs force error, transients, contact establishment/loss and

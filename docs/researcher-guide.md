@@ -18,10 +18,13 @@ Robot support means a measured method/robot/runtime combination, not just a load
 | B1 + Z1 | Learning Force Control | Official Lab 20+1 updates, actual 19-output/native-position-drive semantics and zero-update probe recovery; 500×16 finite JIT transitions and all-input CPU parity, four orientation resets and 0.821928 m position-mode EE error; author weights not obtained and learned force control unproved |
 
 Go2 + Airbot Play (MLM) remains conditional on missing author training material.
-Spot + arm (ReLIC) has an [optional external-export CPU consumer](relic-external-export.md),
-with upstream files kept outside the package under their noncommercial license.
-It accepts already packed 84-value observations and returns 12 raw actor values;
-actual runtime joint order and the full downstream controller are unverified. No all-method/all-robot compatibility or physical
+Spot + arm (ReLIC) now has [bounded original PLAY runtime execution](relic-external-runtime.md)
+and an [external-export CPU consumer](relic-external-export.md). The actual
+19-joint order and source downstream arm/selected-leg target writes are recorded.
+The 500-step run had eight ground-contact terminations, so correct target writes
+and CPU parity do not establish stable performance. Upstream files remain
+external under their noncommercial license; historical physics/contact equivalence
+and the weights' training provenance remain unverified. No all-method/all-robot compatibility or physical
 hardware execution is implied. See the [execution plan](project-plan.md) and
 [AS2/Piper H asset assumptions](as2-piper-assets.md).
 
@@ -66,7 +69,13 @@ For ReLIC, follow [external PT/ONNX consumption](relic-external-export.md).
 Supply trusted local exports and packed observations; the adapter does not fetch
 models, build robot observations or run a simulator. ONNX requires an already
 available optional ONNX Runtime. The measured comparison uses three synthetic
-inputs, not physical trajectories or learned-controller acceptance.
+inputs, not physical trajectories or learned-controller acceptance. To execute
+the actual external task, use the separate [original PLAY runtime entry](relic-external-runtime.md)
+with the designated simulator operator. Its documented two import migrations,
+singleton-contact shape repair and local actuator constructor bridge preserve
+the original compute path without an engine patch. The recorded 500-step budget
+is an experiment boundary, not a permanent CLI limit or an authorization to
+repeat simulation.
 
 ## 1. Run the existing path
 

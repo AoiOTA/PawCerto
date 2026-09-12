@@ -69,16 +69,28 @@ weights. Neither bounded updates nor a recovered probe establishes learned
 force control, exact cross-engine physics or hardware acceptance.
 
 
-ReLIC now has an [optional external-export CPU consumer](relic-external-export.md).
-The original TorchScript and ONNX exports ran on three synthetic finite
-84-value inputs, returning 12 raw leg actor values; all comparisons passed
-rtol=1e-5/atol=1e-6, with maximum absolute difference 3.09944e-6. Six authored
-adapter ABI tests passed. Actual runtime joint order and the exports' training
-stage/seed/update count remain unknown. The downstream arm-seven and selected-
-leg-three target overwrites are not implemented by this consumer. No simulator,
-training or complete ReLIC control result is established. Noncommercial
-upstream code/assets/models/license stay in ignored external artifacts;
-the default package contains only the authored adapter.
+ReLIC's [optional original PLAY runtime](relic-external-runtime.md) completed
+500 finite policy steps with one environment and zero optimizer updates,
+eight undesired-ground-contact terminations and no timeouts. Actual 84→12
+actor inputs/outputs, original 19-joint Spot and 25 body states were recorded;
+all seven arm and selected-leg-three target overwrites matched source buffers
+exactly. All 500 real inputs passed independent CPU replay at atol/rtol=1e-5
+(maximum error 5.722e-6). Measured pre-reset tracking includes all terminal rows:
+arm component RMSE 0.08834 rad, active selected-leg component RMSE 0.30100 rad
+(404 steps), base COM XY velocity vector RMS error 0.90853 m/s and yaw-rate
+RMSE 0.89630 rad/s. All four leg selections occurred. These are physical
+tracking results, not stable whole-body performance or training reproduction.
+
+The current `(1,25,1)` normal-contact scalar signal is not established equivalent
+to historical vectors/total contact force. PLAY inherits Phase1 configuration,
+but the supplied weights' training stage/seed/update count remain unknown.
+Run 001's consumed steps are unknown; run 002 advanced physics before a contact-
+axis failure; run 003 completed the requested window. External migrations and
+all failures remain retained. The public package contains authored interoperability
+only; noncommercial source/assets/models/license stay external. The earlier
+[three-synthetic-input PT/ONNX comparison](relic-external-export.md) remains
+separate CPU evidence.
+
 
 The [approved continuation plan](project-plan.md) starts from the completed
 three-seed UMI baseline. On 2026-09-12 the user selected seed-matched tracking
