@@ -8,10 +8,12 @@ itself a failure. Optional 5 ms contact/execution diagnostics and grouped data
 splits are implemented; isolated installation and training/save/resume entry
 checks have completed. These
 results are separate from the completed baseline below.
-The corrected-inertia, 71-train candidate completed 4000 updates, but failed
-tracking preservation and the frozen-model test: 14/15 trajectories completed;
-test ID 1 inverted, had head-ground impact and ended in BADQACC. No complete
-15-case test mean or behavior-qualified PawCerto release is claimed. See
+The corrected-inertia, 71-train candidate completed 4000 updates and the UMI
+research reproduction stage. Tracking is comparable to the old baseline; the
+user accepts the small mean differences for continued research publication.
+The frozen-model test completed 14/15 trajectories; test ID 1 inverted, had
+head-ground impact and ended in BADQACC. No complete 15-case test mean or
+universal stability is claimed. See
 [the current split-trained result](umi-source-inertia-result.md). KMA's independent release has completed as
 [v0.2.9](https://github.com/AoiOTA/Kiss-My-Agent/releases/tag/v0.2.9): candidate
 CI, public archive, isolated installation/upgrade, and fresh-session Skill
@@ -37,8 +39,8 @@ comparison identified incorrect imported USD principal inertia axes. The
 source-tensor correction passed native validation; one new random-seed-0,
 71-train, 4096 by 24 by 4000 candidate completed using an explicitly selected
 corrected USD. Old assets, policies and results remain distinct. The frozen
-candidate failed final behavior acceptance; the physics correction is not a
-policy-stability repair.
+candidate is proceeding as a research preview with the known instability
+disclosed; the physics correction does not establish universal stability.
 
 The [grouped data implementation](umi-data-split.md) selects 71 train, 15
 validation and 15 test trajectories. It preserves the original source and

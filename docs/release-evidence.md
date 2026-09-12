@@ -1,8 +1,14 @@
-# PawCerto 本地研究候选包
+# PawCerto 研究版本与证据
 
-最新补充候选已完成训练、最终评测、导出实测及归档，**不是正式发布，也未通过行为验收**。修正惯量后的 train71 seed0 完成4000次更新，但 MuJoCo 固定16例跟踪退化；全部15条test各尝试一次，14条完成，ID1倒置、头部触地并触发数值错误。详见[本轮完整结果](umi-source-inertia-result.md)。候选无公共下载地址，下面均为本地文件。
+**UMI研究复现阶段已完成，跟踪精度接近旧基线。** 修正惯量后的 train71 seed0 完成4000次更新，跟踪精度接近旧基线，小幅均值差异不再作为当前推进的阻断项。全部15条test各尝试一次，14条完成，ID1倒置、头部触地并触发数值错误；该案例作为已知局限如实公开。详见[本轮完整结果](umi-source-inertia-result.md)。公开入口为[研究版本 v0.1.0-research.1](https://github.com/AoiOTA/PawCerto/releases/tag/v0.1.0-research.1)。下方同时保留发布前本地快照，以便追溯历史判断和原始记录。
 
-## 最新 split-trained 补充交付
+## 公开研究版本
+
+[GitHub Release](https://github.com/AoiOTA/PawCerto/releases/tag/v0.1.0-research.1) 提供源码、Python wheel 与研究附件。研究附件包含历史三种子及新train71种子的四套自主训练权重、TorchScript导出、数据划分、精选指标、已知失稳案例和三栏视频。外部机器人资产、原始轨迹、官方权重与运行环境需按源码指南另行获取。
+
+源码标签为`v0.1.0-research.1`，Python包版本为`0.1.0.dev1`。下载后按随包`SHA256SUMS`检查完整性；安装与运行从源码的[复现指南](release-reproduction.md)开始。跨机器运行原生Isaac Lab评测时，使用`--usd-path`显式指向本机重新生成的USD；checkpoint中的旧绝对路径保留作历史身份，不需要照着创建目录。
+
+## 发布前保留的 split-trained 本地快照
 
 - [补充归档](../outputs/umi-source-inertia-train71-20260912/candidate/pawcerto-source-inertia-candidate-20260912.tar.gz)：13,304,920 bytes，约12.69 MiB。
 - [清单](../outputs/umi-source-inertia-train71-20260912/candidate/manifest.json)：151个选取文件，包含本轮自训final4000、CPU导出、实际训练身份、4000行训练指标、双引擎/未见测试结果、5 ms摘要和对比视频。

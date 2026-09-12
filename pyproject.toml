@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pawcerto"
-version = "0.1.0.dev0"
+version = "0.1.0.dev1"
 description = "Research framework for reinforcement-learning whole-body control of quadrupedal manipulators"
 requires-python = ">=3.10"
 dependencies = ["numpy", "torch", "scipy"]

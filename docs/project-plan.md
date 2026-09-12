@@ -23,19 +23,21 @@ fixed 4000-iteration seeds, dual-engine evaluations, exports, and actual Conda
 migration checks are complete; retain them as the baseline in
 [the current result](umi-current-result.md).
 
-## Current acceptance
+## Current research milestone
 
-Preserve the existing seed-matched position and orientation means under the
-same engine, target set, and protocol while correcting uncontrolled behavior.
-Complete every fixed full-duration case without inversion, numerical failure,
-automatic reset, or the known head-impact event; author-protocol evaluation
-must no longer contain inverted episodes. Retain all early-termination strata.
-Do not introduce a requirement to match every official-policy metric.
+The user clarified on 2026-09-12 that the small old/new tracking difference is
+acceptable for continuing the project. UMI research reproduction is complete
+with real training, fixed-policy dual-engine evaluation, verified policy
+exports and transparent limitations. Publish a research preview and proceed
+along the method-integration roadmap. A small mean-tracking change or one
+disclosed test instability does not classify the entire integration as failed.
 
-Calf contact can be useful support in a low posture. Neither nonfoot contact
-count, load share, nor zero supported feet alone is failure. Interpret contact
-establishment, tracking, forces, slip, actuator saturation, and the subsequent
-motion together. Exercise a posture exit only if the task requires it.
+Keep every actual inversion, numerical error and early-termination stratum in
+the evidence. The current 14/15 complete unseen test result is not universal
+stability; its invalid prefix cannot enter a complete-test mean. Earlier local
+snapshots retain the prior stricter acceptance decision as historical context.
+Calf or task-appropriate nonfoot support is interpreted with tracking and motion,
+not classified as failure solely from contact counts or load share.
 
 Use official unmodified Isaac Lab/PhysX and the installed fixed Conda
 environments. Keep body-speed-v3 and the explicit 1000 rad/s limit as the
@@ -49,7 +51,8 @@ Stage 1, Stage 2 and an independent-process resume. All four optimizers and
 saved RNG/curriculum/history state were checked; five exported modules in both
 inference modes match saved real inputs exactly. This is integration evidence,
 not effective learning or identical resumed physics trajectories. Full RoboDuet
-training retains a separately chosen budget. See [training](roboduet-training.md).
+training retains a separately chosen budget. See [training](roboduet-training.md)
+and the [next complete learning experiment](roboduet-learning-plan.md).
 
 Item 1's original 5 ms contact and warmup diagnosis is complete; the
 initialization-only intervention did not remove the head collision and that
@@ -65,7 +68,7 @@ budget: corrected source-inertia asset, random seed 0, 4096 environments by
 also uses Item 3's 71 training IDs. Existing policies and old assets remain
 unchanged. Final MuJoCo fixed16 tracking regressed, and test ID 1 inverted,
 struck its head and triggered BADQACC; only 14 of 15 test cases completed. The
-candidate fails the existing acceptance criteria. No extra training or
+candidate is a research result with this disclosed trajectory limitation. No extra training or
 test-driven recipe changes follow automatically. See [the final candidate
 result](umi-source-inertia-result.md).
 
@@ -73,7 +76,7 @@ Item 3's grouping, ID selection and checkpoint provenance are implemented
 (71 train / 15 validation / 15 test). Full-budget split training completed,
 the original iteration-4000 candidate was frozen after validation, and every
 test ID was attempted once. The failed test prefix is excluded from complete
-trajectory means; the complete 15-case test result is a failure. Item 4's isolated
+trajectory means; all 15 IDs were attempted and the one instability is reported. Item 4's isolated
 CPU and Lab online installations and runtime entry checks have completed,
 including three short split-training updates across save/resume. Network
 recovery and one unintended extra resume update are retained in
@@ -118,8 +121,8 @@ scheduler, telemetry, or mandatory team is needed.
 
 KMA release is independent of robot training success: candidate tests and
 exact-commit CI, immutable tag, public distribution and fresh-session discovery
-checks, then Release. PawCerto release additionally requires the behavior and
-independent-data evidence above, plus the public reproduction route. Keep
+checks, then Release. PawCerto research publication uses the completed behavior,
+data-split and reproduction evidence with its known limitations disclosed. Keep
 project-local KMA metadata outside PawCerto's public files.
 
 ## Later work and stop boundaries

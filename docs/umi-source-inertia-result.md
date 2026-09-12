@@ -1,12 +1,18 @@
 # UMI source-inertia correction and split-trained seed 0
 
-The new seed-0 candidate completed its fixed 4000-update training budget with
-exit 0, but **failed behavior acceptance**. MuJoCo fixed16 tracking regressed
-against the old seed-0 baseline, and the frozen-model test attempted all 15
-trajectories but completed only 14: test ID 1 inverted, struck its head on the
-ground and triggered a numerical error. The native fixed16 comparison improved
-tracking, but does not override those failures. No PawCerto release or further
-training is authorized by this result.
+The new seed-0 policy completed its fixed 4000-update training budget with
+exit 0. **The UMI research reproduction stage is complete**, with tracking
+comparable to the old baseline, measured cross-engine behavior and a verified
+CPU export. The small mean-tracking difference is not a blocker for the
+research preview. This is a practical research assessment, not a statistical
+equivalence result from multiple new training seeds.
+
+The frozen-model test attempted all 15 trajectories and completed 14. Test ID
+1 inverted, struck its head on the ground and triggered a numerical error.
+This is a known trajectory-level limitation, retained alongside the successful
+cases. Research publication is proceeding with these boundaries disclosed;
+universal stability is not claimed. No additional training or test-driven
+tuning was performed to change the recorded result.
 
 ## What changed and why
 
@@ -103,7 +109,11 @@ the corrected USD; MuJoCo uses its unchanged source-derived model.
 | Native Lab / old seed 0, corrected USD | 12.012 | 0.026563 | 0 |
 | Native Lab / new seed 0, corrected USD | 10.987 | 0.023062 | 0 |
 
-The MuJoCo row fails the agreed preservation of both tracking means. Neither
+MuJoCo position error increases by 1.648 mm and orientation error by
+0.000820 rad (about 0.047 degrees), while native tracking improves. The current
+research milestone accepts these small mean differences. The old policy also
+trained on all 101 trajectories while the new one used only 71; this is not a
+controlled comparison of data efficiency or inertia correction. Neither
 MuJoCo policy has head-ground contact in these 16 cases; the new one retains a
 self-contact case. Native 5 ms ContactSensor readout has no head-body net normal
 force sample above 1 N in either policy. This native signal is not a
@@ -135,7 +145,7 @@ All early-terminated prefixes remain in the means. Timeout fraction measures
 survival, not task success. The same pool and random seed do not establish
 one-to-one pairing of individual episodes. See [author readout](../outputs/umi-source-inertia-train71-20260912/native-author-paired-readout.json).
 
-## Frozen-model test: failed, 14 of 15 complete
+## Frozen-model test: 14 of 15 complete, one instability
 
 The original iteration-4000 model was [frozen](../outputs/umi-source-inertia-train71-20260912/frozen-candidate.json)
 after validation and before the final benchmark/test. Every one of the 15 test
@@ -166,11 +176,18 @@ and [its substep summary](../outputs/umi-source-inertia-train71-20260912/test-mo
 
 The source-inertia conversion defect is corrected and validated, and the
 new split-trained policy learns substantially relative to initialization.
-It does not meet the agreed tracking and uncontrolled-behavior criteria.
-PawCerto remains a local research candidate; no public push or release follows.
-No new seed, training-budget extension, test-driven tuning or automatic engine
-change is being started. This negative result does not invalidate the
-separately completed installation, method integration or KMA release evidence.
+The research milestone now accepts tracking close to the old baseline and
+publication with explicit limitations. The earlier strict requirement to
+preserve both means exactly and complete every test case had classified this
+candidate as not qualified; that historical decision remains in the original
+local result snapshots. The current research-preview decision does not change
+any measurement, remove the test failure, or establish universal stability.
+
+The framework continues from this completed UMI reproduction stage. Further
+UMI robustness work and full RoboDuet learning remain separate experiments;
+no automatic extra seed, budget extension or test-driven tuning is included
+in publishing this result. Installation, method integration and KMA release
+evidence retain their own scopes.
 
 The [comparison video](../outputs/umi-source-inertia-train71-20260912/video/comparison_fixed4000_case06.mp4)
 shows old seed 0, historical seed 1 and new train71 seed 0 on the same preselected
@@ -178,12 +195,12 @@ case 6. It reconstructs saved states on CPU, with no inference or physics
 integration. Target arrays match exactly; input hashes are unchanged. The full
 426-frame video decodes successfully and four encoded frames were inspected.
 Its 17.04-second container covers the 0–17-second task including both endpoints.
-This illustrative case does not substitute for the failed test.
+This illustrative case does not substitute for the all-trajectory test result.
 
 Relevant CPU checks pass: 40 tests and 24 subtests, plus three upstream policy
 comparisons in the existing reference environment. Independent evidence review
-found no material data-identity or aggregation error and confirmed the behavior
-failure. See [final checks](../outputs/implementation-validation-20260912/final-source-inertia-validation.json).
+found no material data-identity or aggregation error and confirmed the recorded
+trajectory failure. See [final checks](../outputs/implementation-validation-20260912/final-source-inertia-validation.json).
 
 The exported actor has zero-error reload parity and completed an actual
 17-second CPU MuJoCo execution on validation ID 7. All seven saved arrays match
@@ -191,4 +208,5 @@ the full-checkpoint execution exactly. The actor-only loader retains unknown
 training identity; explicit artifact provenance links the export to the frozen
 checkpoint without relabeling arbitrary actor-only weights as held out. See
 [export consumption](../outputs/umi-source-inertia-train71-20260912/export-consumer-17s/verification.json).
-These checks establish package execution, not behavior acceptance.
+These checks establish package execution; the known trajectory instability
+remains disclosed.

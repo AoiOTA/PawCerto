@@ -1,10 +1,13 @@
 # Public reproduction and candidate release
 
-The source is being prepared for release. The current three training seeds and
-48 full MuJoCo evaluation cases are documented in [current results](umi-current-result.md).
-Seed 1 head impact, author-protocol inversion, and lack of an independent
-trajectory holdout prevent a behavior-qualified release. Package parity and
-installation checks do not remove those limitations.
+The UMI research reproduction stage is complete. This research preview provides
+source, own-trained policy exports and measured evaluation results. The
+[split-trained result](umi-source-inertia-result.md) has tracking close to the
+earlier baseline and 14/15 complete unseen test trajectories; ID 1 inverted,
+struck its head and triggered a numerical error. The historical three-seed
+full-pool results also retain their head-contact and author-inversion cases.
+These are disclosed research limitations, not a block on research publication.
+Package parity and installation checks do not establish universal stability.
 
 ## What the source provides
 
@@ -19,8 +22,11 @@ tooling and is not required to install or execute PawCerto.
 not source deliverables. Run `scripts/fetch_umi.py` and `scripts/build_mujoco.py`
 from the README to obtain official inputs and regenerate paths. Historical
 links into `outputs/` refer to separate research evidence, not files supplied by
-a source checkout. No published PawCerto weight/evidence download is claimed
-until the release assets actually exist.
+a source checkout. Download own-trained policies and selected evidence from
+[research preview v0.1.0-research.1](https://github.com/AoiOTA/PawCerto/releases/tag/v0.1.0-research.1). The source tag and
+artifact README identify the matching version and external inputs. For native
+checkpoint evaluation on another machine, pass `--usd-path` to a locally
+generated USD instead of the historical path recorded in the checkpoint.
 
 ## Maintained analysis commands
 
