@@ -185,3 +185,31 @@ The exact checker, source archive, build/consumption logs and `validation.json`
 are under `outputs/framework-package-lfc-relic-20260913/`. This verifies local
 committed-source delivery and CPU consumers, not a fresh simulator install,
 learned force control, full ReLIC execution or public release.
+
+
+## External ReLIC PLAY interoperability package, 2026-09-13
+
+Source commit `e8c52d8f52a4c03633c7685a4d30ef6f18f3e349` was archived from Git,
+built without dependency resolution, and consumed through an unpacked wheel
+outside the checkout using isolated Python (`-I`). All PawCerto imports came
+from that wheel. The new runtime helper constructed the actual original Spot
+knee actuator against installed official Lab, retained the original compute
+function identity, and instantiated the original PLAY and public recorder
+configuration on CPU. No simulator was launched for this package check.
+
+The public external-actor API replayed all 500 saved `run-003` observations.
+Maximum CPU/GPU action difference was `5.7220458984375e-06`, within
+`rtol=1e-5, atol=1e-5`. Build and consumption both exited 0. The 143-entry wheel
+is 348,779 bytes, SHA-256
+`037614f7198fc73f144f793e988a9c7034ac4e4d2cd3f3815f9d5969fa2779f1`.
+The checker, exact source archive and build/consumption records are under
+`outputs/framework-package-relic-play-20260913/`. An initial shell attempt used
+an unavailable `python` command; the retained successful check uses `python3`.
+
+Original external ReLIC source, licensed assets and weights remain outside the
+wheel. Repository scripts are consumed from the source archive, as in the
+existing installation guide. This verifies packaging and actual-input CPU
+consumption; the separate [physical report](relic-external-runtime.md) retains
+eight terminations, tracking errors, original failed attempts and unverified
+historical contact-signal equivalence. It does not establish stable control,
+learning success, a fresh simulator installation or public release.
