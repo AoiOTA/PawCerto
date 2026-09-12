@@ -19,7 +19,7 @@ tracking differences do not block this next method.
    verification uses saved inputs; UMI evaluators cannot establish RoboDuet
    behavior. Record errors and termination state before automatic reset.
 
-## Proposed first complete candidate
+## First complete candidate
 
 - Fresh seed 0, original Go1/ARX5 and current corrected runtime.
 - 4096 environments, 24 control steps per update, five PPO epochs and four
@@ -32,14 +32,17 @@ tracking differences do not block this next method.
   save ordinary recovery checkpoints every 400 updates. At the switch endpoint
   arm_update_count is still zero; the planned final count is 39999.
 
-This is a proposal for one complete candidate, not an already started run or
-three-seed reproduction. The local CLI defaults to 2048 environments and needs
-an explicit additional-iteration budget. Existing 16-environment short-run
-records have no reliable throughput or peak-memory measurements; their file
-mtimes cannot establish 4096-environment capacity or total wall time. The GPU
-time/storage budget must be fixed before starting the long experiment. Measure
-throughput and memory during its actual initial valid updates and continue the
-same run; avoid an unrelated sequence of tiny screens.
+This single seed-0 candidate is now running at the stated 4096-environment,
+50000-update budget. Initialization failures, the shared-geometry repair and
+the independent-service resource boundary remain recorded in the
+[current status](status.md); the measured optimization and checkpoint resume
+are in the [throughput record](roboduet-throughput.md). This is not a completed
+learning result or three-seed reproduction. The local CLI still defaults to
+2048 environments and needs an explicit additional-iteration budget; use the
+recorded command when reproducing this candidate. Actual run measurements,
+not the earlier 16-environment file timestamps, establish observed throughput
+and memory. Concurrent AS2 training changes throughput, so the single-run
+measurement is not a fixed completion-time prediction.
 
 ## Fixed evaluation
 
