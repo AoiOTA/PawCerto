@@ -14,8 +14,8 @@ Robot support means a measured method/robot/runtime combination, not just a load
 | Go1 + ARX5 | RoboDuet | Actual Stage 1/2/resume, export and fixed physical evaluation; early 0/1600 comparison shows no learning improvement; 10001/50000 endpoints pending |
 | Go1 + WidowX 250s | DeepWBC | Corrected full-terrain 21 updates and 500 policy steps in physical simulation; actual-input CPU export consumption; EE RMSE 0.47936 m and one signed-roll failure; learning unproved |
 | AS2 EDU + Piper H with stock gripper | UMI target-body adaptation | Completed 4096 × 24 × 4000 candidate; [final result](as2-umi-learning-result.md): Lab tracking improves with 7/16 inversions and degraded support; MuJoCo 16/16 BADQACC, zero complete cases; export consumption fails |
-| B2 + Z1 | UniFP, after the priority milestone | Original-source CPU integration; Isaac Lab execution pending |
-| B1 + Z1 | Learning Force Control, later expansion | Planned integration |
+| B2 + Z1 | UniFP | Official Lab 20+1 updates, separate strict force-stage probe, 500 exported-policy-driven steps and real-input CPU consumption; one roll reset, EE error 0.458129 m; training/evaluation rigid-property difference retained; learning unproved |
+| B1 + Z1 | Learning Force Control | Fixed-source 19-output CPU network/PPO and raw-checkpoint/two-JIT parity; random initialization only, author weights not obtained; simulator and learned behavior unverified |
 
 Go2 + Airbot Play (MLM) remains conditional on missing author training material.
 Spot + arm (ReLIC) is an optional research integration subject to its original
@@ -38,6 +38,20 @@ do not authorize another AS2 experiment or parameter change. Run scripts from
 the source checkout: a wheel does not bundle the scripts, vendor inputs or local
 experiment outputs. Coordinate simulator work with the assigned GPU operator;
 these examples do not authorize duplicate training services.
+
+For UniFP, use [the original CPU components](unifp-implementation.md),
+[official Lab conversion/training/resume](unifp-lab-runtime.md) and
+[fixed evaluation/export](unifp-evaluation.md). The source installation extra
+`python -m pip install -e '.[unifp]'` provides the tested pydelatin 0.3.0 terrain
+dependency. The completed 21-update and 500-step check does not authorize another
+run or full force-stage training. Its runtime report preserves the failed
+post-checkpoint probe and training-time gripper-property gap.
+
+For Learning Force Control, follow [source acquisition and CPU checkpoint/export](learning-force-control-implementation.md).
+Use the resolved configuration with strict raw-state loading and the matching
+two-file JIT pair. The demonstrated checkpoint is initialized from original
+source, not author-trained weights. That CPU entry does not supply a simulator;
+URDF and referenced-license gaps remain at their documented owners.
 
 ## 1. Run the existing path
 

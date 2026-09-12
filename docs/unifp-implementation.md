@@ -1,6 +1,6 @@
 # UniFP B2/Z1 CPU implementation
 
-The low-level UniFP method is implemented as CPU-compatible network/PPO/storage/runner code and tensor equations, with the official B2/Z1 configuration and assets. It is **not yet an Isaac Lab task or a learned policy**. No GPU simulation or training was launched for this integration.
+This document records the original CPU integration of the low-level UniFP network/PPO/storage/runner and tensor equations with official B2/Z1 configuration and assets. No GPU simulation or training was launched for that initial CPU stage. The subsequent [official Lab integration](unifp-lab-runtime.md) completed 20+1 updates, a separate strict force-stage probe, and [500-step exported-policy execution plus real-input CPU consumption](unifp-evaluation.md). Those bounded results do not establish a learned force-control policy; the original CPU evidence below retains its original scope.
 
 Source is [unified-force/UniFP at 68847a070f88d731058c3d8476929bc3b205f5bd](https://github.com/unified-force/UniFP/tree/68847a070f88d731058c3d8476929bc3b205f5bd). `scripts/fetch_unifp.py` downloads the complete method source and B2/Z1 robot assets into ignored `third_party/unifp-reference`, verifies all 62 downloaded files against their Git blob SHA-1 identities, and retains the full pinned Git tree in `.source-tree.json`. Existing differing files cause a failure. The fixed tree contains no policy checkpoint and no full high-level imitation pipeline. Root BSD-3-Clause (Unitree) and `legged_gym/LICENSE` (ETH/NVIDIA) are preserved in the reference and method package; file-level notices in algorithm sources remain intact.
 
@@ -83,4 +83,17 @@ OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 /home/lyb/miniconda3/envs/pawcerto-mujoco/bi
 
 On 2026-09-12, all **11 tests passed** in `pawcerto-mujoco` (0.614 s), including the full 2336/447/12/73/17 network. All 22 URDF mesh references resolve, and the URDF actuated-joint order matches the 19-joint contract above. The tests compare initialized upstream/local network state and inference outputs, original PPO/adaptation updates including both Adam states, GAE/timeouts, checkpoint restore, observation history/reset, 27-term reward execution, force schedules, PD saturation and quaternion frames. Core tests directly compile the corresponding methods from the pinned downloaded source without importing its simulator. They use explicit tensor fixtures, not a physics simulation. An initial bytecode-level source-copy test was unsuitable across import compilation contexts; it was replaced by source AST equality, with executable parity retained.
 
-Evidence level: CPU source/equation/optimizer parity. Outstanding: actual Lab B2/Z1 runtime, force and contact signal/timing parity, complete reset/domain-randomization/terrain port, trained low-level policy, sim-to-sim/real deployment, and unavailable full high-level imitation pipeline. Passing these tests proves none of those outcomes.
+Evidence level of the tests above: CPU source/equation/optimizer parity. Later
+[Lab execution](unifp-lab-runtime.md) supplies the actual runtime, original terrain,
+reset/randomization bindings, 20+1 optimizer updates and strict force-stage
+boundary execution. The separate [500-step evaluation and CPU consumer](unifp-evaluation.md)
+record one roll reset, mean EE error 0.458129 m and actual-input export parity.
+The resume process's post-checkpoint probe failure remains preserved; the
+zero-update repaired probe does not add a trained force stage. Evaluation used
+a repaired gripper rigid-property binding missing during the short training,
+so training/evaluation physics are not claimed identical.
+
+Outstanding: full low-level/force-stage learning, cross-engine force/contact
+and trajectory equivalence, sim-to-sim/real deployment, and the unavailable full
+high-level imitation pipeline. Neither the historical CPU tests nor the later
+bounded runtime execution proves these outcomes.

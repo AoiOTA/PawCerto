@@ -188,10 +188,22 @@ No extra seeds, reward search, extended training or hardware execution are
 automatically included. A robot-name change, completed batch or successful
 asset load is not a completed learned transfer.
 
-UniFP, Learning Force Control and the other expansion methods remain in the
-overall scope but follow this shared-framework and AS2/Piper H milestone.
-Preserve completed CPU integration work; it does not justify starting their
-large training runs ahead of the newly prioritized work.
+After the completed AS2 single-candidate experiment, UniFP's separately bounded
+[official Lab integration](unifp-lab-runtime.md) completed 20+1 updates, a repaired
+zero-update strict force-stage probe and one [500-step evaluation/export check](unifp-evaluation.md).
+The original resume saved model 21 before its probe failed; that failure remains
+preserved. One roll reset and 0.458129 m mean EE error, plus real-input CPU parity,
+establish execution rather than learning. Evaluation repaired a gripper rigid-
+property gap present during training; those physics configurations are not
+claimed identical. No additional optimizer or simulator work follows automatically.
+
+Learning Force Control's [CPU integration](learning-force-control-implementation.md)
+is also complete: original fixed-source 19-output network/PPO and strict raw
+checkpoint/two-JIT parity, using random initialization rather than author weights.
+UniFP full force-stage training, LFC simulation/training and the other expansion
+methods remain in the overall unfinished scope. Their larger runs require their
+own established budgets; these finite deliveries do not redefine the framework
+goal as completed or authorize hardware execution.
 
 The user also requires protecting the 32 GB workstation after memory pressure
 terminated the desktop application. Large simulator/training processes run in
@@ -223,21 +235,22 @@ The user has also approved UniFP, Learning Force Control, Multi-critic Twist
 Tracking and ReLIC as parts of the final framework scope, with
 LeggedManip_Lab as a separate engineering reference. This expands the planned
 capabilities beyond pose tracking to force/compliance, end-effector velocity
-tracking and interlimb cooperation. These are planned integrations, not
-implemented or reproduced methods. Source inspections and their dated limits
+tracking and interlimb cooperation. UniFP now has bounded Lab execution and Learning Force Control has CPU
+integration; full force-control learning and the other integrations remain
+uncompleted. Their evidence boundaries are stated above. Source inspections and their dated limits
 are recorded in [the candidate research report](../exa-results/wbc-rl-candidates-2026-09-12/report.md).
 
 | Component | Intended place in PawCerto | First integration boundary |
 |---|---|---|
-| UniFP | Low-level unified end-effector force/position control | Preserve the B2/Z1 task, force estimator, supervision and stage transitions. Public training code exists; policy availability and the separate high-level imitation pipeline remain unverified. |
-| Learning Force Control | Force tracking and variable-compliance baseline | Preserve B1/Z1, history adaptation and the actual 17-action control boundary. Verify local checkpoint loading and distinguish actuator-network files from policy weights. |
+| UniFP | Low-level unified end-effector force/position control | Preserved B2/Z1 task, force estimator, supervision and strict stage transition now have bounded Lab execution and actual-input export parity. Full trained force control, cross-engine equivalence and the separate high-level imitation pipeline remain unverified. |
+| Learning Force Control | Force tracking and variable-compliance baseline | Preserve B1/Z1 and history adaptation. The paper describes 17 effective controls, but this fixed executable source uses 19 network outputs; CPU strict raw-checkpoint/two-JIT consumption now passes with random initialization. Author weights were not obtained. Unbound URDF xacro and missing referenced licenses constrain simulator/environment and recurrent-helper work; actuator-network files are not policy weights. |
 | Multi-critic Twist Tracking | End-effector velocity tracking and separate value learning for leg, arm and contact objectives | Official training code has not been located. Obtain implementation materials or explicitly scope an independent paper-based implementation before coding; do not present its advantages as DeepWBC advantage mixing. |
 | ReLIC | Optional research integration for arm/leg manipulation and changing support roles | Retain model-based manipulation plus learned support. The inspected code has a non-commercial research license; keep it outside the default broadly reusable distribution unless appropriate permission is established. Including the method in the plan does not authorize relicensing its code. |
 | LeggedManip_Lab | Engineering reference for robot configuration, task entrypoints and deployment interfaces | Inspect working consumers and applicable licenses before reusing specific code. Robot configurations do not count as paper-method reproductions, and version compatibility still needs execution evidence. |
 
 The existing UMI → RoboDuet → DeepWBC route remains the near-term sequence;
-MLM retains its material-availability gate. UniFP is the first proposed force
-control integration, followed by Learning Force Control as a comparison.
+MLM retains its material-availability gate. UniFP is the first force-control integration with bounded Lab execution,
+followed by Learning Force Control with CPU integration as a comparison.
 Multi-critic and ReLIC can advance when their material and permission
 dependencies are ready, without blocking other methods. Method-specific plans
 must establish their training budgets before starting large runs.

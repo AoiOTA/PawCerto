@@ -1,0 +1,6 @@
+{
+  "commands": [0.3, 0.0, 0.0],
+  "ee_goal_lpy": [0.66, 0.0, 0.0],
+  "traj_time_s": 2.0,
+  "hold_time_s": 1.0
+}

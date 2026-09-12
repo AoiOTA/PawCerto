@@ -4,7 +4,9 @@ Current priority: complete the authorized RoboDuet learning and evaluation run.
 The AS2 EDU/Piper H one-candidate experiment has ended with failed stable-control
 and transfer results; no further AS2 experiment is automatically included. DeepWBC's bounded 21-update/export/500-step path and source
 delivery are complete; its learning outcome remains unproved. Hardware execution
-remains outside scope. UniFP's CPU implementation is retained for later expansion.
+remains outside scope. UniFP's bounded Lab integration and Learning Force Control's
+CPU integration are complete at the evidence levels below; full force-control
+learning and the remaining method integrations are unfinished.
 See [the updated sequence](project-plan.md#updated-execution-priority-2026-09-12).
 
 RoboDuet's seed-0, 4096-environment, 50000-update learning experiment has begun
@@ -22,6 +24,29 @@ ablation. Full learning and the 10001/50000 endpoints remain pending. See the
 DeepWBC's corrected complete terrain run finished 21 updates and a fixed 500-step physical evaluation, with contact in all 500 samples. EE RMSE was 0.47936 m and forward-velocity MAE 0.49878 m/s; one signed-roll failure was followed by an unfinished 455-sample episode. Independent installed-package and TorchScript consumers matched checkpoint actions on all actual observations within the recorded tolerance. This is bounded execution and export evidence, not learning success. The earlier zero-contact/freefall run is excluded from physical-task conclusions. The six-axis foot signal remains approximate on official, unmodified Isaac Lab/PhysX. See [the final corrected-terrain report](experiments/deepwbc-reconstructed-runtime-20260912.md), [training](deepwbc-training.md) and [evaluation/export](deepwbc-evaluation.md).
 
 The AS2/Piper H fresh seed-0 candidate completed 4096 environments × 24 transitions × 4000 updates (393,216,000 transitions), and its service exited 0. In the final paired Lab evaluation, mean EE position/orientation error improved from 0.510769 m / 1.625607 rad to 0.119318 m / 0.363301 rad, but 7/16 cases inverted and ground support deteriorated. Final MuJoCo fixed16 transfer had 16/16 BADQACC failures and zero complete cases. Exported actor weights matched, but the verifier and independent exported-policy consumer failed numerically; package consumption did not pass. The one-candidate experiment is complete with a negative stable-control/transfer outcome. No further AS2 experiments or parameter changes follow automatically. The [final report](as2-umi-learning-result.md) retains all model 0/500/4000 outcomes and the failed export consumers. The earlier OOM, invalid inverted-initial-pose update and 601-row equivalent shared-geometry repair remain preserved. Installation/TCP values are nominal assumptions. See [the completed protocol](as2-umi-learning-plan.md), [geometry repair](as2-piper-isaac.md) and [asset assumptions](as2-piper-assets.md).
+
+UniFP on B2/Z1 completed 20 updates plus one independent-process resume update.
+The original resume process saved model 21 and then exited 1 in the boundary
+probe; a separate zero-update repair probe exited 0 with strict stage flags
+false/true/true at global steps 192000/192001/192002. The unique model-21
+500-step evaluation exited 0, with all transitions finite and TorchScript
+actually driving the robot, one roll reset and mean EE error 0.458129 m.
+Independent CPU consumption of all real inputs matched checkpoint outputs
+exactly (versus saved GPU actions/estimates, maximum differences 4.17e-7/1.49e-7).
+Training missed the `gripperMover` rigid-property overrides; evaluation used
+the repaired runtime, so training/evaluation physics are not claimed identical.
+This is bounded integration, not learned force control. See [runtime evidence](unifp-lab-runtime.md)
+and [evaluation/export](unifp-evaluation.md).
+
+Learning Force Control on B1/Z1 has [CPU source and checkpoint integration](learning-force-control-implementation.md):
+181 verified source blobs, three CPU parity tests and original random-initialized
+raw-checkpoint/two-JIT consumption with maximum output error zero. The actual
+fixed source ABI has 19 outputs; the paper's 17-control description does not
+change that ABI. Anonymous W&B lookup returned `project:null` and did not obtain
+author weights. Unbound URDF xacro elements and missing referenced licenses
+remain specific simulator/environment and recurrent-helper limitations; they
+do not invalidate the delivered nonrecurrent CPU path. No LFC simulation,
+learned policy performance or hardware acceptance is established.
 
 The [approved continuation plan](project-plan.md) starts from the completed
 three-seed UMI baseline. On 2026-09-12 the user selected seed-matched tracking
