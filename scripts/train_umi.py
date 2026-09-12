@@ -1,0 +1,99 @@
+"""Train original UMI PPO on the original robot in Isaac Lab PhysX."""
+import argparse
+import json
+from pathlib import Path
+import sys
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0,str(ROOT))
+
+
+def main():
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--config',type=Path,default=ROOT/'reference/checkpoints/tossing/ours/config.json')
+    parser.add_argument('--trajectory',type=Path,default=ROOT/'reference/data/tossing.pkl')
+    parser.add_argument('--split-manifest', type=Path, help='Grouped manifest; training always uses train partition')
+    parser.add_argument('--joint-names',type=Path,required=True,help='Official Gym DOF names JSON, queried from original asset')
+    parser.add_argument('--num-envs',type=int,default=4096)
+    parser.add_argument('--iterations',type=int,default=None,help='Default: original config max_iterations')
+    parser.add_argument('--resume',type=Path)
+    parser.add_argument('--weights',type=Path,help='Initialize original actor+critic weights without optimizer/iteration')
+    parser.add_argument('--seed',type=int,default=0)
+    parser.add_argument('--force-signal',choices=('reconstructed-solver','normal-contact'),
+                        default='reconstructed-solver',help='EMD input; normal-contact explicitly selects the previous proxy')
+    parser.add_argument('--save-every',type=int,default=None,help='Checkpoint interval; default: original config interval')
+    parser.add_argument('--output',type=Path,default=ROOT/'runs/umi_training')
+    from isaaclab.app import AppLauncher
+    AppLauncher.add_app_launcher_args(parser)
+    args=parser.parse_args()
+    if args.resume and args.weights:
+        parser.error('--resume and --weights are mutually exclusive')
+    if args.save_every is not None and args.save_every < 1:
+        parser.error('--save-every must be positive')
+    launcher=AppLauncher(args)
+    try:
+        import random
+        import numpy as np
+        import torch
+        from pawcerto.isaac.runtime import Go2Arx5Isaac
+        from pawcerto.methods.umi_on_legs.training import UmiTrainer, load_config
+        from pawcerto.methods.umi_on_legs.training.isaac_env import UmiIsaacTrainingEnv
+        from pawcerto.methods.umi_on_legs.training.semantics import runtime_contract,require_resume_contract
+        random.seed(args.seed); np.random.seed(args.seed); torch.manual_seed(args.seed)
+        config=load_config(args.config)
+        if config['env']['tasks']['reaching']['sequence_sampler'].get('trajectory_selection') and not args.split_manifest:
+            raise ValueError('Saved split config requires --split-manifest; refusing silent full-pool training')
+        from pawcerto.methods.umi_on_legs.data_split import configure_selection
+        selection=configure_selection(config,args.trajectory,args.split_manifest,'train')
+        config['seed']=args.seed
+        config['env']['cfg']['env']['num_envs']=args.num_envs
+        config['pawcerto_runtime']=runtime_contract(
+            args.force_signal, config.get('joint_velocity_limit_override_rad_s'))
+        source_path=args.resume or args.weights
+        source_runtime=None
+        if source_path:
+            source_checkpoint=torch.load(source_path,map_location='cpu',weights_only=False)
+            source_selection=source_checkpoint.get('config',{}).get('env',{}).get('tasks',{}).get('reaching',{}).get('sequence_sampler',{}).get('trajectory_selection')
+            if selection != source_selection:
+                raise ValueError('Resume/weight initialization must preserve the training partition; start from scratch for a new split')
+            source_runtime=source_checkpoint.get('config',{}).get('pawcerto_runtime')
+            if args.resume:
+                require_resume_contract(source_runtime,config['pawcerto_runtime'])
+            del source_checkpoint
+        config['training_initialization']=dict(
+            mode='resume' if args.resume else 'weights' if args.weights else 'random',
+            checkpoint=str(source_path.resolve()) if source_path else None,
+            source_pawcerto_runtime=source_runtime)
+        runtime=Go2Arx5Isaac(config,json.loads(args.joint_names.read_text()),args.num_envs,args.device,
+                           training=True,force_signal=args.force_signal)
+        env=UmiIsaacTrainingEnv(runtime,config,args.trajectory,args.seed)
+        trainer=UmiTrainer(env,config,args.device)
+        if args.resume:
+            trainer.load(args.resume)
+        elif args.weights:
+            trainer.load(args.weights,load_optimizer=False)
+        args.output.mkdir(parents=True,exist_ok=True)
+        (args.output/'config.json').write_text(json.dumps(config,indent=2))
+        iterations=config['runner']['max_iterations'] if args.iterations is None else args.iterations
+        save_every=config['runner']['ckpt_save_interval'] if args.save_every is None else args.save_every
+        trainer.save(args.output/f'model_{trainer.iteration}.pt')
+        with (args.output/'metrics.jsonl').open('a') as metrics:
+            for _ in range(iterations):
+                stats=trainer.train_iteration()
+                line=json.dumps(stats)
+                metrics.write(line+'\n');metrics.flush()
+                print(line,flush=True)
+                if trainer.iteration%save_every==0:
+                    trainer.save(args.output/f'model_{trainer.iteration}.pt')
+        trainer.save(args.output/f'model_{trainer.iteration}.pt')
+    except BaseException:
+        import traceback
+        traceback.print_exc()
+        raise
+    finally:
+        launcher.app.close(exit_code=int(sys.exc_info()[0] is not None))
+
+
+if __name__=='__main__':
+    main()

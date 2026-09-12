@@ -1,0 +1,19 @@
+PawCerto third-party attribution
+
+Original PawCerto contributions are licensed under the root MIT LICENSE.
+Existing third-party notices and licenses continue to govern their respective
+code and are not replaced by that license.
+
+UMI-on-Legs: https://github.com/real-stanford/umi-on-legs
+Reference source revision: d75c9c182d8044dadf53043612da2ffbf1936a97.
+UMI-derived files retain their MIT attribution headers. PPO components retain
+their NVIDIA BSD-3-Clause notices and license terms in the corresponding files.
+
+Isaac Lab, Isaac Sim, PhysX, MuJoCo, PyTorch and other dependencies retain their
+own licenses. Default installation uses official unmodified Lab/PhysX; it does
+not require KISS My Agent or a locally rebuilt physics engine.
+
+Downloaded robot models, trajectories and upstream checkpoints are not granted
+a new license by this repository. Fetch them from the sources referenced by
+scripts/fetch_umi.py and retain upstream terms. These external assets and vendor
+packages are not redistributed in the PawCerto source release.

@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pawcerto"
+version = "0.1.0.dev0"
+description = "UMI-on-Legs whole-body control on the original Go2 and ARX5"
+requires-python = ">=3.10"
+dependencies = ["numpy", "torch", "scipy"]
+
+[project.optional-dependencies]
+mujoco = ["mujoco>=3.8"]
+analysis = ["matplotlib>=3.9"]
+
+[tool.setuptools.packages.find]
+include = ["pawcerto*"]
+namespaces = true
