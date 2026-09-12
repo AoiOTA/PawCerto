@@ -38,15 +38,17 @@ default asset location. A custom conversion output is selected explicitly with
 short-run artifacts used the separately retained diagnostic asset directory;
 changing the location does not reattribute those records.
 
-A short integration configuration explicitly shortens the switch to iteration 0:
+A short integration configuration explicitly shortens the switch to iteration 0.
+From the repository root, activate the documented environment:
 
 ```bash
+conda activate pawcerto-lab-sim610
 OMNI_KIT_ACCEPT_EULA=yes PYTHONNOUSERSITE=1 \
-/home/lyb/miniconda3/envs/pawcerto-lab-sim610/bin/python scripts/train_roboduet.py \
+python scripts/train_roboduet.py \
   --visualizer none --device cuda:0 --num-envs 16 --iterations 2 \
   --stage-switch-iteration 0 --output runs/roboduet_short
 OMNI_KIT_ACCEPT_EULA=yes PYTHONNOUSERSITE=1 \
-/home/lyb/miniconda3/envs/pawcerto-lab-sim610/bin/python scripts/train_roboduet.py \
+python scripts/train_roboduet.py \
   --visualizer none --device cuda:0 --iterations 1 \
   --resume runs/roboduet_short/model_2.pt --output runs/roboduet_short_resumed
 ```
