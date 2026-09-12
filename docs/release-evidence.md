@@ -4,12 +4,12 @@
 
 ## 当前交付
 
-- [含当前视频的候选归档](../outputs/release-candidate-20260912/visual-mesh-v2/candidate/pawcerto-research-candidate-20260912.tar.gz)：14,041,489 bytes（约13.39 MiB）。
-- [文件清单](../outputs/release-candidate-20260912/visual-mesh-v2/candidate/manifest.json)：131个实际选取文件，合计31,517,388 bytes；逐文件保存大小与SHA256。
-- [归档验证](../outputs/release-candidate-20260912/visual-mesh-v2/candidate/archive-verification.json)：134个普通文件成员完整解压读取，逐一与清单哈希一致；另3项是候选说明、清单及校验表。
-- [候选说明](../outputs/release-candidate-20260912/visual-mesh-v2/candidate/README.md)及[SHA256SUMS](../outputs/release-candidate-20260912/visual-mesh-v2/candidate/SHA256SUMS)。
+- [含当前视频的候选归档](../outputs/release-candidate-20260912/visual-mesh-v3/candidate/pawcerto-research-candidate-20260912.tar.gz)：14,141,762 bytes（约13.49 MiB）。
+- [文件清单](../outputs/release-candidate-20260912/visual-mesh-v3/candidate/manifest.json)：137个实际选取文件，合计31,637,511 bytes；逐文件保存大小与SHA256。
+- [归档验证](../outputs/release-candidate-20260912/visual-mesh-v3/candidate/archive-verification.json)：140个普通文件成员完整解压读取，逐一与清单哈希一致；另3项是候选说明、清单及校验表。
+- [候选说明](../outputs/release-candidate-20260912/visual-mesh-v3/candidate/README.md)及[SHA256SUMS](../outputs/release-candidate-20260912/visual-mesh-v3/candidate/SHA256SUMS)。
 
-归档SHA256：`1e35fcb2b8646e10f049b4999c6db8a353ab748d742e2aaf8b00c4a5b25cb62e`。
+归档SHA256：`e0b59da2a49b4855a56775b9023cfb67647e6c8fc02f38acc021b72e97f40152`。
 
 | 内容 | 选取范围与证据含义 |
 |---|---|
@@ -20,25 +20,29 @@
 | 有界诊断 | 5 ms读出、ground/free单步、Lab真实PD warmup状态干预的summary/validation及完整解释报告；初始状态替换仍撞头，未修复行为 |
 | 当前必要视频 | 同一预选`sample(16,2027)` case6，三种子final4000并排完整0–17秒的保存状态可视化；不是新策略执行 |
 
-归档内路径保留仓库相对布局。整理时源码HEAD为`c7977638099ff84b36738b7c9e421109de936cb8`；这只是整理时的源码快照，不能倒推成历史训练使用的提交。原报告/配置中的绝对路径保留为历史来源，不是公共URL，也不是可迁移运行参数。
+归档内路径保留仓库相对布局。整理时源码HEAD为`98f6e8ff559ecf72b970a881a19b9be87d6eba8f`；这只是整理时的源码快照，不能倒推成历史训练使用的提交。原报告/配置中的绝对路径保留为历史来源，不是公共URL，也不是可迁移运行参数。
 
-## 官方外观恢复与视频检查
+## 外观恢复、夹爪方向修正与视频检查
 
-先前简化画面仍是Go2＋ARX5的关节、惯量与碰撞模型，但资产构建器为物理评测删除了URDF的`visual`，所以只显示碰撞几何和绘制的连杆。当前版本从**已有官方URDF**恢复Go2多材质DAE、ARX5 STL和Finray OBJ外观；它不是替换机器人或重新训练。
+先前简化画面仍是Go2＋ARX5的关节、惯量与碰撞模型，但资产构建器为物理评测删除了URDF的`visual`，所以只显示碰撞几何和绘制的连杆。v2从**已有官方URDF**恢复Go2多材质DAE、ARX5 STL和Finray OBJ外观。进一步检查发现源URDF夹爪visual与collision方向不一致；当前v3在独立渲染模型中覆盖三个夹爪visual旋转，使其对齐实际仿真碰撞装配。这不是替换机器人、改物理或重新训练。
 
-恢复只发生在独立可视化模型：新增44个质量0、碰撞mask为0的visual geom，保留原网格变换和漫反射颜色，原碰撞体仅隐藏显示。原body质量/惯量、关节/基座映射等数组以及碰撞几何/摩擦/solver参数逐项精确一致；三个保存case的3×849帧全部body FK最大差为0。[模型验证](../outputs/release-candidate-20260912/visual-mesh-v2/model-verification.json)记录检查。默认物理MJCF/runtime及已保存记录均未改。
+恢复只发生在独立可视化模型：新增44个质量0、碰撞mask为0的visual geom，保留网格顶点、缩放及漫反射颜色；v3仅覆盖link6壳体和左右Finray三处visual旋转，原碰撞体仅隐藏显示。原body质量/惯量、关节/基座映射等数组以及碰撞几何/摩擦/solver参数逐项精确一致；三个保存case的3×849帧全部body FK最大差为0。[模型验证](../outputs/release-candidate-20260912/visual-mesh-v3/model-verification.json)记录检查。默认物理MJCF/runtime及已保存记录均未改。
+
+夹爪问题已定位至源URDF：壳体visual为RPY=(0,0,0)，同STL collision却绕X旋转90°；两指visual沿±Y横向展开，而collision和末端点沿+X。直接源网格与v2编译后局部顶点双向最大误差仅8.21e-9 m，因此不是转换器把网格放错。[原始几何诊断](../outputs/release-candidate-20260912/visual-mesh-v2/gripper-inspection/geometry-verification.json)保留。
+
+v3三个visual旋转分别为壳体(pi/2,0,0)、左指(0,pi/2,0)、右指(pi,-pi/2,0)，平移不变。[原visual／collision／修正后三栏近景](../outputs/release-candidate-20260912/visual-mesh-v3/gripper-before-collision-after.png)已目检；[夹爪验证](../outputs/release-candidate-20260912/visual-mesh-v3/gripper-verification.json)确认左右包络镜像且不相交，Y间隙4.00 mm，两指朝+X伸到222.37 mm，EE=(220,0,0) mm位于两指间，指根与壳体X包络相交。collision尖端为223.36 mm，说明visual和collision仍是不同近似网格；这只是包络/图像验证，不是CAD装配或实机验收。`x85_z94`代表臂座(85,0,94) mm安装偏移，不是夹爪开度。当前仍是无夹爪驱动关节的固定刚性装配，没有开合或Finray柔顺仿真。源OBJ引用的MTL本地缺失，因此材质颜色也不作实物认证。
 
 转换复用已安装pycollada，无新下载或依赖安装。少数原DAE材质分片包含零法线，对这些未定义法线采用几何自动法线，不改顶点、面或材质颜色。场景灯光仅影响显示。
 
-[播放三种子final4000 case6视频](../outputs/release-candidate-20260912/visual-mesh-v2/three_final4000_case6_visual_meshes.mp4)。三个面板依次为seed0、seed1、seed2，全部来自原始评测NPZ/JSON；目标序列逐值相同。
+[播放三种子final4000 case6视频](../outputs/release-candidate-20260912/visual-mesh-v3/three_final4000_case6_visual_meshes.mp4)。三个面板依次为seed0、seed1、seed2，全部来自原始评测NPZ/JSON；目标序列逐值相同。
 
-- [成片6.04秒帧](../outputs/release-candidate-20260912/visual-mesh-v2/encoded-frame-02.png)：中列seed1的旧记录已出现Head_lower接触。此次5 ms诊断没有产生这段行为。
-- [成片7.96秒帧](../outputs/release-candidate-20260912/visual-mesh-v2/encoded-frame-03.png)：右列seed2显示RR_calf支撑，与seed1头部撞击分开解释。
-- [成片17秒帧](../outputs/release-candidate-20260912/visual-mesh-v2/encoded-frame-04.png)：完整时域末端仍有跟踪与支持读数。
+- [成片6.04秒帧](../outputs/release-candidate-20260912/visual-mesh-v3/encoded-frame-02.png)：中列seed1的旧记录已出现Head_lower接触。此次5 ms诊断没有产生这段行为。
+- [成片7.96秒帧](../outputs/release-candidate-20260912/visual-mesh-v3/encoded-frame-03.png)：右列seed2显示RR_calf支撑，与seed1头部撞击分开解释。
+- [成片17秒帧](../outputs/release-candidate-20260912/visual-mesh-v3/encoded-frame-04.png)：完整时域末端仍有跟踪与支持读数。
 
 视频为2160×820、H.264、25 fps、426帧，含首尾端点，因此容器长度17.04秒。使用现有Replay、Xvfb与CPU `llvmpipe`，设置`CUDA_VISIBLE_DEVICES=''`；隔离脚本禁止`mj_step`。只有位姿重建`mj_forward`，没有推理、积分或训练，产品渲染源码未改。t0根据原配置重建reset状态，其余帧取最近的原20 ms记录。接触标签也是原20 ms端点读数，不冒充新增5 ms实际步进求解力。
 
-编码、ffprobe、整片ffmpeg解码和抽帧均退出0；实际成片0/6.04/7.96/17秒四帧已目检，机器人、目标/实际末端、标题和指标清晰，无观察到的裁切或损坏。[视频验证](../outputs/release-candidate-20260912/visual-mesh-v2/verification.json)和[输入哈希](../outputs/release-candidate-20260912/visual-mesh-v2/input-hashes.json)证明所读原始文件前后不变。该单例可视化不替代16例评测、未见轨迹验证或连续行为验收。旧normal-contact与weights-only适配视频未混入当前候选。
+编码、ffprobe、整片ffmpeg解码和抽帧均退出0；实际成片0/6.04/7.96/17秒四帧已目检，机器人、目标/实际末端、标题和指标清晰，无观察到的裁切或损坏。[视频验证](../outputs/release-candidate-20260912/visual-mesh-v3/verification.json)和[输入哈希](../outputs/release-candidate-20260912/visual-mesh-v3/input-hashes.json)证明所读原始文件前后不变。该单例可视化不替代16例评测、未见轨迹验证或连续行为验收。旧normal-contact与weights-only适配视频未混入当前候选。
 
 ## 来源、保留内容与限制
 
@@ -48,4 +52,4 @@
 
 安装复现由[独立交付状态](release-reproduction.md)说明；归档完整性不等于空缓存安装或新机训练成功。运行还需要匹配的源码、输入、观测/历史/延迟/PD适配器，`actor.ts`不是可直接上实机的控制器。KMA本地配置不在包内，研究者不需安装KMA。
 
-候选目录总新增约167 MiB，包含初始无视频快照、旧碰撞外观视频候选、当前官方外观候选及本地可视化转换文件，低于2 GiB预算。前两个候选及旧视频完整保留；当前入口是`visual-mesh-v2/candidate/`。原数据未覆盖或删除，本项整理没有执行动态模拟、训练、push或发布。
+候选目录总新增约235 MiB，包含初始无视频快照、旧碰撞外观视频候选、v2原visual候选、v3夹爪方向修正候选及本地可视化转换文件，低于2 GiB预算。所有旧候选及旧视频完整保留；当前入口是`visual-mesh-v3/candidate/`。原数据未覆盖或删除，本项整理没有执行动态模拟、训练、push或发布。

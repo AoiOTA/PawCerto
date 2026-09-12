@@ -132,7 +132,39 @@ print('CPU package check passed; no CUDA context initialized')
 PY
 ```
 
-## Validation scope and local cached replay
+## Fresh online validation on 2026-09-12
+
+A separate Conda prefix and initially empty Conda/uv caches were populated from
+official network sources. Final synchronization exited 0; isolated CPU imports
+passed with CUDA uninitialized. All 275 distribution versions (274 frozen
+requirements plus Conda pip) exactly match the existing verified Conda environment.
+The same nine dependency metadata incompatibilities listed below remain; this
+check did not repair or mask them.
+
+The normal Git checkout stalled on documentation/test LFS media; the same source
+SHA was restored with smudging disabled. The initial uv download then shared a
+slow PyPI connection, measured at about 85.6 KB/s. It was interrupted with exit
+130, retaining completed entries in the new cache. Only 39 outstanding wheels
+were fetched from their original official URLs using bounded HTTP range requests;
+all 39 complete SHA256 hashes matched the pinned requirements. A transport-only
+requirements copy replaced those URLs with the newly downloaded file URIs.
+Versions, hashes, platform markers and editable sources were unchanged. No old
+package cache, old environment or modified physics source was used.
+
+The fresh environment also converted the original robot USD, performed a real
+16-environment training update/save, then resumed in a separate process. All three
+commands exited 0. The actual endpoint was iteration 3: `--iterations 2` adds two
+updates after iteration 1. The intended one-update resume should use
+`--iterations 1`. Checkpoints retain the same 71-ID training split and saved
+optimizer/environment/RNG state; this is installation evidence, not learning.
+
+This verifies fresh online acquisition plus installation with an observed network
+recovery; it is not an uninterrupted one-command network-install claim. The
+[reproduction report](release-reproduction.md) records the actual runtime checks
+and candidate-source boundary. Routine development continues in the existing
+environments; this release check is not a prerequisite for each experiment.
+
+## Historical validation scope and local cached replay
 
 The default Conda route was exercised on 2026-09-12 in the new environment
 `/home/lyb/miniconda3/envs/pawcerto-lab-sim610`. Conda supplied Python **3.12.14**;
@@ -192,7 +224,7 @@ not general dependency consistency or complete simulator functionality.
 
 A newly created Conda environment (or a clean venv) with reused, hash-checked local wheels and populated
 cache is different from an empty-cache installation on a new machine. The latter
-network route has **not been demonstrated**. The portable requirements remove
+network route was **not demonstrated by that cached replay**; the separate fresh online check above now records its completed acquisition and transport recovery. The portable requirements remove
 absolute machine paths but do not turn the existing 214-wheel directory into a
 complete offline bundle: NVIDIA/Torch and other cached artifacts are still needed.
 

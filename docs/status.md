@@ -5,9 +5,10 @@ three-seed UMI baseline. On 2026-09-12 the user selected seed-matched tracking
 preservation and correction of uncontrolled behavior, with controllable calf
 or other task-appropriate support allowed. A nonfoot contact count is not by
 itself a failure. Optional 5 ms contact/execution diagnostics and grouped data
-splits are implemented; public reproduction preparation continues. These
+splits are implemented; isolated installation and training/save/resume entry
+checks have completed. These
 results are separate from the completed baseline below.
-No new policy, independent holdout result, or PawCerto public release is claimed
+No behavior-qualified new policy, independent holdout result, or PawCerto public release is claimed
 by this implementation status. KMA's independent release has completed as
 [v0.2.9](https://github.com/AoiOTA/Kiss-My-Agent/releases/tag/v0.2.9): candidate
 CI, public archive, isolated installation/upgrade, and fresh-session Skill
@@ -36,8 +37,13 @@ validation and 15 test trajectories. It preserves the original source and
 full-pool default, reads training identity from actual checkpoint metadata,
 and does not qualify old full-pool or actor-only weights as held out. The
 source contains no recording IDs, limiting recording-level independence
-claims. Only validation entrypoint checks have run; formal split training and
-held-out behavior evaluation remain unfinished.
+claims. Validation entrypoint checks and a fresh-environment 16-environment
+training/save/resume check using the 71 train IDs have run. The latter completed
+three updates: one initial update followed by two additional resume updates,
+one more than intended because the operator misread the additional-iteration
+argument. Execution is stopped. This checks entrypoints, not learning;
+full-budget split training and held-out behavior evaluation remain unfinished.
+See [public reproduction evidence](release-reproduction.md).
 
 Current results: [all three fixed training seeds](umi-relaxed-seed-repetitions.md) have completed their 4000-iteration budgets, final MuJoCo/native evaluations and exported-package self-tests under body-speed-v3 and joint1000. Each uses 393,216,000 transitions. Final MuJoCo16 position errors are 10.169 / 12.300 / 12.499 mm, versus Official's 8.657 mm; all 48 final trajectories complete without inversion or numerical failure. Independent review found no new material integrity issue. This does not remove contact or broader stability limits: seed 1 has a sampled head contact of about 779 N in case 6, and its author-protocol latest500 includes two inverted early-terminated episodes. Author timeout fractions are 95.0% / 94.8% / 91.2%, versus Official's 97.8%. All random baselines, intermediate failures, nonfoot contact and protocol strata remain in the [combined report](../outputs/mujoco/umi_relaxed_body_speed_three_seed_summary/README.md); there is no checkpoint selection. The first UMI learning-and-fixed-policy-transfer loop is supported on the supplied trajectory pool, with contact, generalization and formal-acceptance limits explicitly retained.
 

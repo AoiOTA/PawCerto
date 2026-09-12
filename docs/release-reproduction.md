@@ -45,7 +45,8 @@ python scripts/verify_umi_export.py \
 
 Contact and coordination readers require all 16 saved cases to be complete;
 incomplete prefixes cannot be compared as though they were full trajectories.
-They preserve the original 1 N and 20 ms sampling definitions: sampled force
+Pass the original configuration used to generate each saved record to the
+coordination reader. These readers preserve the original 1 N and 20 ms sampling definitions: sampled force
 sums are not continuous impulses and adjacent supported foot positions do not
 prove continuous sliding. The exporter verifier checks actor/config/joint-order
 identity, launches original and exported policies in separate processes, and
@@ -91,11 +92,40 @@ condition, not a new fixed16 performance result. The initial candidate source
 snapshot was preserved before synchronizing the latest split interfaces for
 subsequent checks; old results retain their original identity.
 
-The separate Lab empty-cache installation is still downloading its pinned
-packages. Documentation/test-only Git LFS media stalled during checkout; that
-attempt and exit 128 were retained, and the same official source SHA was restored
-with LFS smudging disabled. No old package cache was substituted and no Lab source
-was patched. Final logs and command/status records live under
-`outputs/release-reproduction-20260912/`. Existing environments and caches remain
-intact. The source snapshot is a local candidate, not a fetched public PawCerto
-release, because publication is still pending.
+The Lab fresh online installation completed with initially empty private Conda
+and uv caches. Isolated CPU checks passed, CUDA remained uninitialized, and all
+275 distribution versions exactly match the existing Conda environment. `uv pip
+check` still reports the same nine known metadata incompatibilities; no extra
+package or source patch was introduced to hide them.
+
+Two transport interruptions are retained: documentation/test LFS smudging stalled
+(the checkout was restored at the same source SHA with smudging disabled), and
+uv's shared PyPI connection delivered about 85.6 KB/s. The latter was interrupted
+with exit 130. Only 39 incomplete wheels were recovered from their original
+official URLs using bounded HTTP/1.1 ranges; all 39 complete SHA256 hashes passed.
+The final sync used a transport-only requirements copy and the completed entries
+in the newly populated cache. This is fresh online acquisition with recovery,
+not an uninterrupted default-command claim. No previous package cache was used.
+
+The final runtime candidate is source commit `a380b39`. Its original robot USD
+conversion, first training update/save, and separate-process resume all exited 0
+(17.98, 129.14 and 20.36 seconds respectively). With 16 environments × 24 steps,
+`model_1.pt`, `model_2.pt` and `model_3.pt` retain 384, 768 and 1152 cumulative
+transitions. Each checkpoint has the same 71-ID training selection and manifest
+hash, finite model tensors, optimizer/environment state, and CPU uint8 RNG state.
+The resumed metrics start at iteration 2 and are finite.
+
+The intended resume endpoint was iteration 2. The validation driver mistakenly
+passed `--iterations 2`, which means two **additional** updates; the actual endpoint
+is 3. The extra update and original command are retained, with no further training.
+Use `--iterations 1` to resume one update. This bounded check demonstrates real
+update/save/resume consumption, not uninterrupted-trajectory equivalence, learning
+or test-set quality. Detailed checkpoint hashes and assertions are in
+`lab-runtime-validation.json`; total new disk usage is about 35 GiB, below the
+100 GiB assignment bound.
+
+Actual commands, exit statuses, source identities, network recovery and package
+inventories are retained in `outputs/release-reproduction-20260912/`. Existing
+environments and caches remain intact. The source is a local candidate, not a
+fetched public PawCerto release. Empty-cache checks are parallel release work;
+routine research uses the already verified environments.

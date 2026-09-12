@@ -54,9 +54,13 @@ long training is started. Item 2 therefore currently has a negative result,
 not a behavior-qualified repair.
 
 Item 3's grouping, ID selection and checkpoint provenance are implemented
-(71 train / 15 validation / 15 test), but split training and independent
-held-out behavior evaluation remain unfinished. Item 4's public reproduction
-checks continue independently. The original scopes below remain the acceptance
+(71 train / 15 validation / 15 test), but full-budget split training and
+independent held-out behavior evaluation remain unfinished. Item 4's isolated
+CPU and Lab online installations and runtime entry checks have completed,
+including three short split-training updates across save/resume. Network
+recovery and one unintended extra resume update are retained in
+[the reproduction record](release-reproduction.md); this is not an uninterrupted
+installation or learning-success claim. The original scopes below remain the acceptance
 contract, not a list of tasks all still awaiting implementation.
 
 1. Add optional, non-perturbing 5 ms execution/contact readout to the existing
