@@ -44,6 +44,13 @@ not the earlier 16-environment file timestamps, establish observed throughput
 and memory. Concurrent AS2 training changes throughput, so the single-run
 measurement is not a fixed completion-time prediction.
 
+The [10001 checkpoint and fixed evaluation](roboduet-model10001-evaluation.md)
+are now complete. All nine released-arm cases ended for low height before the
+first target switch; none completed 20 seconds. The checkpoint has zero arm
+updates and the run has since entered Stage 2. This negative milestone retains
+the original 50000 endpoint and fixed protocol, with no automatic tuning or
+additional candidate.
+
 ## Fixed evaluation
 
 Use fixed seeds and commands within the supported ranges, covering standing

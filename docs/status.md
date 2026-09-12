@@ -18,8 +18,13 @@ service. Fixed physical evaluation of checkpoints 0/1600 has now completed:
 2/9 versus 0/9 full 20-second cases, with worse same-prefix leg tracking at 1600.
 Every early failure triggers body height, with no inversion in these prefixes.
 Both policies use released-arm `official_play`; this is not a causal Stage 1
-ablation. Full learning and the 10001/50000 endpoints remain pending. See the
-[early physical readout and video](roboduet-evaluation-result.md).
+ablation. The [10001 stage-boundary evaluation](roboduet-model10001-evaluation.md)
+also completed with 9/9 low-height terminations at 0.10–0.40 seconds. On the
+three-model common prefixes, EE position and yaw tracking regressed despite
+smaller aggregate linear-velocity error. The checkpoint still has zero arm
+updates; subsequent training has entered Stage 2. Full learning and the 50000
+endpoint remain pending. See the [early physical readout and video](roboduet-evaluation-result.md)
+and the [stage-boundary comparison](roboduet-model10001-evaluation.md).
 
 DeepWBC's corrected complete terrain run finished 21 updates and a fixed 500-step physical evaluation, with contact in all 500 samples. EE RMSE was 0.47936 m and forward-velocity MAE 0.49878 m/s; one signed-roll failure was followed by an unfinished 455-sample episode. Independent installed-package and TorchScript consumers matched checkpoint actions on all actual observations within the recorded tolerance. This is bounded execution and export evidence, not learning success. The earlier zero-contact/freefall run is excluded from physical-task conclusions. The six-axis foot signal remains approximate on official, unmodified Isaac Lab/PhysX. See [the final corrected-terrain report](experiments/deepwbc-reconstructed-runtime-20260912.md), [training](deepwbc-training.md) and [evaluation/export](deepwbc-evaluation.md).
 
