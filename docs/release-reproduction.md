@@ -158,3 +158,30 @@ packaging and CPU consumption evidence. It is not a fresh Lab installation,
 new physical validation, release publication or completion of the remaining
 methods. The separate UniFP report retains the roll termination and the
 training/evaluation physical-property difference.
+
+## LFC runtime and optional external ReLIC consumer package, 2026-09-13
+
+Source commit `c557a57ff9ea9ff307d65c47b591f67fa694d415` was archived from Git
+and built without dependency resolution. The resulting wheel was unpacked in
+a temporary directory outside the checkout and consumed by isolated Python
+(`-I`). Every loaded PawCerto module came from that wheel. Required LFC runtime,
+training, robot, license texts and license provenance were present. The ReLIC
+package contained only the authored external-actor adapter; no upstream ReLIC
+code, assets, weights or license were bundled.
+
+The wheel consumer loaded LFC model 21 and its original JIT pair on all 8,000
+actual saved evaluation histories. CPU checkpoint/JIT actions and latents
+matched exactly; maximum action difference from saved GPU outputs was
+3.278255e-7. It also consumed the separately stored original ReLIC PT/ONNX
+exports on the three existing synthetic inputs; all comparisons passed at
+`rtol=1e-5, atol=1e-6`, maximum absolute difference 3.099442e-6. The external
+models and their noncommercial research license remained outside the package.
+Neither check reran physics or training.
+
+Both build and consumption exited 0. The wheel contains 142 entries and is
+347,111 bytes, SHA-256
+`6e46593d2f3a28a3754f3a401ceafd4b649fb79bfcbb8d5383daba50df80d458`.
+The exact checker, source archive, build/consumption logs and `validation.json`
+are under `outputs/framework-package-lfc-relic-20260913/`. This verifies local
+committed-source delivery and CPU consumers, not a fresh simulator install,
+learned force control, full ReLIC execution or public release.
