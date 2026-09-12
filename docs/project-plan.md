@@ -265,7 +265,10 @@ MLM retains its material-availability gate. UniFP is the first force-control int
 followed by Learning Force Control with bounded Lab integration as a comparison.
 Multi-critic and ReLIC can advance when their material and permission
 dependencies are ready, without blocking other methods. Method-specific plans
-must establish their training budgets before starting large runs.
+must establish their training budgets before starting large runs. The
+[source-derived full learning budgets](full-learning-budgets.md) now make the
+UniFP, DeepWBC and Learning Force Control workloads reviewable; these are
+prospective allocations, not started experiments.
 
 ReLIC's optional external runtime completed its bounded 500-step, zero-optimizer
 assignment using the original PLAY task and downstream arm-seven/selected-leg-
