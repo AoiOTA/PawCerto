@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[2]
 _asset = runpy.run_path(str(ROOT / 'pawcerto/mujoco/roboduet_asset.py'))
 JOINT_NAMES, DEFAULT_POS = _asset['JOINT_NAMES'], _asset['DEFAULT_POS']
 
-DEFAULT_USD = ROOT / 'outputs/roboduet-runtime-20260912/usd/usd_path.txt'
+DEFAULT_USD = ROOT / 'reference/isaac/go1_arx5/usd_path.txt'
 
 
 class Go1Arx5Isaac:

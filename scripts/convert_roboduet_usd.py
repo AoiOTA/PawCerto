@@ -9,7 +9,7 @@ import runpy
 source_tree = runpy.run_path(str(ROOT / 'pawcerto/mujoco/roboduet_asset.py'))['source_tree']
 from isaaclab.app import AppLauncher
 parser = argparse.ArgumentParser()
-parser.add_argument('--output', type=Path, default=ROOT / 'outputs/roboduet-runtime-20260912/usd')
+parser.add_argument('--output', type=Path, default=ROOT / 'reference/isaac/go1_arx5')
 AppLauncher.add_app_launcher_args(parser)
 args = parser.parse_args()
 args.output.mkdir(parents=True, exist_ok=True)

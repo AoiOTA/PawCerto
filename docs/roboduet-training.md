@@ -29,6 +29,15 @@ arm values are not physical torques for reward interpretation: the original
 reward tensor nevertheless contains those mixed values, which this port keeps.
 See the runtime evidence for how Gym's effort-mode drive interprets them.
 
+Prepare the fixed source/assets with `python3 scripts/fetch_roboduet.py`, then
+use the existing [official Lab Conda environment](isaaclab-install.md) to run
+`python scripts/convert_roboduet_usd.py --visualizer none --device cuda:0`.
+The converter and runtime share `reference/isaac/go1_arx5/usd_path.txt` as their
+default asset location. A custom conversion output is selected explicitly with
+`--usd /path/to/usd_path.txt` on both initial training and resume. Historical
+short-run artifacts used the separately retained diagnostic asset directory;
+changing the location does not reattribute those records.
+
 A short integration configuration explicitly shortens the switch to iteration 0:
 
 ```bash

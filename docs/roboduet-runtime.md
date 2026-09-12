@@ -5,6 +5,21 @@ The source is `third_party/roboduet-reference` at
 Isaac Lab / Isaac Sim 6.1 installation and unmodified PhysX. No UMI runtime,
 physics, reward or asset was changed.
 
+## Default asset location
+
+The converter and runtime share `reference/isaac/go1_arx5` as the default asset
+directory. `usd_path.txt` points to `merged/merged.usda`; `merged.urdf` and all USD
+payload layers remain beside it in the converter's directory structure. Running
+`scripts/convert_roboduet_usd.py` without `--output` creates this public runtime
+asset location. An explicit `--output` still selects an alternative directory.
+
+The already validated asset was copied intact from the historical
+`outputs/roboduet-runtime-20260912/usd` directory. Only the new `usd_path.txt` was
+rewritten to point at the new location. All other copied files are byte-identical;
+USD references and payloads are relative and resolve within the new directory.
+CPU USD reopening and dependency resolution verified the copy without converting
+again or starting simulation. The original diagnostic directory is preserved.
+
 ## Implemented interface
 
 `Go1Arx5Isaac(num_envs, device, usd_path)` provides `reset`, `set_stage`, `joints`,
@@ -49,7 +64,7 @@ it is not a matched Gym/Lab trajectory comparison.
 
 ## Asset and physical evidence
 
-`outputs/roboduet-runtime-20260912/` contains the conversion, Gym readback, Lab
+`outputs/roboduet-runtime-20260912/` contains the historical conversion, Gym readback, Lab
 substep samples, and independent MuJoCo asset. The official conversion preserves
 `dont_collapse` trunk/foot bodies and merges the fixed arm mounting into `base`.
 Consequently `base` has mass 0.4403772056 kg, with no artificial 1 kg root body.
@@ -137,7 +152,12 @@ or silently clamping samples. It is a declared source-method difference.
 
 ## Commands and observed recovery
 
-From the project root, using the existing Conda interpreters:
+Current public commands, from the project root using the existing Conda
+interpreters, follow. The converter now defaults to `reference/isaac/go1_arx5`.
+The historical conversion command had the same arguments but its then-default
+output was `outputs/roboduet-runtime-20260912/usd`; the historical execution
+results below refer to that original location. Relocating the verified copy did
+not rerun those physics experiments.
 
 ```bash
 OMNI_KIT_ACCEPT_EULA=yes PYTHONNOUSERSITE=1 \
