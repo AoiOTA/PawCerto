@@ -7,18 +7,25 @@ policies or hardware estimates, or connect hardware.
 
 ## Reproduce
 
+Run from the source checkout after [fetching and building the pinned AS2
+inputs](as2-piper-assets.md#reproduce-on-cpu). The Python wheel does not include
+`scripts/`, vendor inputs or generated USD. Use `python` from the existing
+official [Lab environment](isaaclab-install.md) for USD operations; CPU
+preparation also works in the documented CPU environment. Generated assets
+and the local experiment records are not included in this source delivery.
+
 CPU preparation (no AppLauncher or GPU):
 
 ```bash
-/home/lyb/miniconda3/envs/pawcerto-lab-sim610/bin/python scripts/convert_as2_piper_usd.py --prepare-only
-PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 /home/lyb/miniconda3/envs/pawcerto-mujoco/bin/python -m pytest -q tests/test_as2_piper_isaac_asset.py
+python scripts/convert_as2_piper_usd.py --prepare-only
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -q tests/test_as2_piper_isaac_asset.py
 ```
 
 Actual conversion requires the installed official Isaac Lab runtime. Schedule
 this with the current GPU operator; do not launch a second competing service:
 
 ```bash
-/home/lyb/miniconda3/envs/pawcerto-lab-sim610/bin/python scripts/convert_as2_piper_usd.py --visualizer none
+python scripts/convert_as2_piper_usd.py --visualizer none
 ```
 
 Current Lab checkout is `third_party/IsaacLab-develop-sim610`. `--output`
@@ -29,6 +36,20 @@ the actual USD path named by `usd_path.txt` (current importer may produce
 `conversion-validation.json` and `usd_path.txt`. Copy the entire USD directory
 when relocating the generated asset; reprepare URDFs to resolve mesh paths
 on a different checkout.
+
+To update an already converted asset without AppLauncher or GPU, with its
+`usd_path.txt` pointing at that asset and all shared layers inside `--output`:
+
+```bash
+python scripts/convert_as2_piper_usd.py --prepare-collision-offsets-only \
+  --output reference/isaac/as2_piper --contact-offset 0.01 --rest-offset 0
+```
+
+This writes generated USD layers and `collision-offset-validation.json`;
+it is not a read-only check. Do not apply it to assets held by a running
+simulator. Use a separate copy for validation. See the
+[AS2 learning protocol](as2-umi-learning-plan.md) for the preserved OOM,
+shared-geometry control comparison and formal model0 baseline.
 
 ## Source and consumer contract
 
@@ -84,12 +105,57 @@ corrections, not estimated robot parameters.
 
 Joint drive target is `none` (zero importer stiffness and damping) for direct
 torque control. No added armature, identified motor gains or measured friction
-is supplied. Self collision is explicitly enabled. Contact offsets, materials
-and other physics settings remain the official importer/PhysX defaults;
-subsequent UMI runtime overrides must be declared in that adaptation's config
-and documentation. Source effort and velocity limits recorded in the report
+is supplied. Self collision is explicitly enabled. The delivered collision
+geometry declares contact offset 0.01 m and rest offset 0 m, matching the UMI
+runtime configuration. These attributes are authored in the shared geometry
+layers, including all 11 mesh instance proxies, so the runtime can retain
+instancing when cloning 4096 environments. Materials and other settings retain
+the importer defaults until declared runtime overrides apply. A standalone
+`--prepare-collision-offsets-only` converter option applies and validates these
+attributes without launching a simulator; a normal conversion also authors them. Source effort and velocity limits recorded in the report
 are a consumer contract, not hardware certification or proof that every
 runtime controller enforces them.
+
+## Source-delivery verification (2026-09-13)
+
+The source candidate was checked in an isolated checkout snapshot containing
+only the four assigned AS2 runtime/converter/document changes. Existing CPU
+dependencies were reused; no simulator, training or dependency installation
+was started for this delivery.
+
+- Selected source-preparation, robot-binding and solver-force CPU tests:
+  **10 passed, 13 subtests passed**. The broader upstream policy-reference
+  test could not collect because the CPU environment lacks `pytorch3d`;
+  the Lab interpreter lacks `pytest`. These are not counted as passes.
+- The public `--prepare-only` and AS2 configuration-preparation commands
+  completed. The public `--prepare-collision-offsets-only` command repaired
+  deliberately different offsets on a disposable copy of the generated USD:
+  **42 collisions / 11 instance-proxy collisions**, with all compared
+  non-offset composed attributes, relations, types and instancing unchanged.
+  Standalone USD source inertia/FK/joint validation passed without AppLauncher.
+- A wheel was built offline with `pip wheel --no-deps --no-build-isolation
+  --no-index --no-cache-dir`. Its **82 package files** matched the isolated
+  source bytes. It contains Python modules and licenses, not the checkout
+  scripts, assets, experiment outputs or engine patches.
+- A process outside the repository imported the extracted wheel's UMI
+  modules, loaded the actual 4096-environment `model_0.pt`, exported it and
+  consumed that export. Checkpoint/export actions were exactly equal on
+  **64 deterministic 132-dimensional CPU inputs**. A separate Torch/NumPy-only
+  process, importing neither PawCerto nor a simulator, consumed the same
+  TorchScript actor with zero action difference. This is serialization and
+  package-consumer evidence, not a new closed-loop rollout or fresh-install
+  validation; the wheel was extracted for import, not installed.
+- The formal model0 saved fixed16 arrays were independently read back:
+  **16 complete cases, 849 saved endpoints each**, finite numeric arrays,
+  exact frozen targets, and position/orientation means matching the published
+  baseline. The target-packing command in the linked learning protocol also
+  ran on copies of those inputs. No active experiment files were rewritten.
+
+Local validation commands, scripts, logs and consumer result JSONs are retained
+under `/tmp/pawcerto-as2-delivery-20260913/`; they are not shipped artifacts.
+The recorded physical startup/control results remain attributed to the GPU
+operator. Model500/4000 performance, final Lab comparison and final learned
+policy export are outside this source-delivery result and remain pending.
 
 ## Evidence boundary
 
@@ -106,7 +172,7 @@ asset. With the installed environments (Lab has USD but no pytest; the CPU
 MuJoCo environment has pytest but no USD), run the standalone read-only audit:
 
 ```bash
-/home/lyb/miniconda3/envs/pawcerto-lab-sim610/bin/python scripts/convert_as2_piper_usd.py --validate-only
+python scripts/convert_as2_piper_usd.py --validate-only
 ```
 
 This opens USD using `pxr` only and never starts AppLauncher.

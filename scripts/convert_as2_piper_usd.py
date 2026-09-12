@@ -9,6 +9,37 @@ sys.path.insert(0, str(ROOT))
 from pawcerto.robots.as2_piper import prepare_urdf
 
 
+def author_shared_collision_offsets(stage, output_root, contact_offset=.01, rest_offset=0.):
+    """Put nominal solver offsets on generated shared layers, not every clone."""
+    import math
+    from pxr import Sdf, Usd, UsdPhysics
+    output_root = Path(output_root).resolve()
+    changed_layers = []
+    for layer in stage.GetUsedLayers():
+        if not layer.realPath or not Path(layer.realPath).resolve().is_relative_to(output_root):
+            continue
+        layer_stage = Usd.Stage.Open(layer)
+        changed = False
+        for prim in layer_stage.Traverse():
+            if prim.HasAPI(UsdPhysics.CollisionAPI):
+                prim.AddAppliedSchema('PhysxCollisionAPI')
+                prim.CreateAttribute('physxCollision:contactOffset', Sdf.ValueTypeNames.Float, custom=False).Set(contact_offset)
+                prim.CreateAttribute('physxCollision:restOffset', Sdf.ValueTypeNames.Float, custom=False).Set(rest_offset)
+                changed = True
+        if changed:
+            layer.Save()
+            changed_layers.append(layer.realPath)
+    collisions = [p for p in Usd.PrimRange(stage.GetPseudoRoot(), Usd.TraverseInstanceProxies())
+                  if p.HasAPI(UsdPhysics.CollisionAPI)]
+    for prim in collisions:
+        contact = prim.GetAttribute('physxCollision:contactOffset').Get()
+        rest = prim.GetAttribute('physxCollision:restOffset').Get()
+        if contact is None or not math.isclose(contact, contact_offset, rel_tol=1e-6) or rest != rest_offset:
+            raise ValueError(f'Shared collision offsets did not compose: {prim.GetPath()}')
+    return dict(contact_offset=contact_offset, rest_offset=rest_offset, changed_layers=changed_layers,
+                collision_count=len(collisions), instance_proxy_collision_count=sum(p.IsInstanceProxy() for p in collisions))
+
+
 def author_source_physx_limits(stage, tree):
     """Preserve source limits when importer only emits Newton velocity fields."""
     import math
@@ -220,6 +251,17 @@ def main():
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument('--prepare-only', action='store_true')
     mode.add_argument('--validate-only', action='store_true')
+    mode.add_argument('--prepare-collision-offsets-only', action='store_true')
+    parser.add_argument('--contact-offset', type=float, default=.01)
+    parser.add_argument('--rest-offset', type=float, default=0.)
+    if '--prepare-collision-offsets-only' in sys.argv:
+        from pxr import Usd
+        args = parser.parse_args()
+        stage = Usd.Stage.Open((args.output / 'usd_path.txt').read_text().strip())
+        report = author_shared_collision_offsets(stage, args.output, args.contact_offset, args.rest_offset)
+        (args.output / 'collision-offset-validation.json').write_text(json.dumps(report, indent=2) + '\n')
+        print(json.dumps(report, indent=2))
+        return
     if '--validate-only' in sys.argv:
         import xml.etree.ElementTree as ET
         from pxr import Usd
@@ -254,7 +296,9 @@ def main():
             joint_drive=UrdfConverterCfg.JointDriveCfg(target_type='none')))
         stage = Usd.Stage.Open(converter.usd_path)
         author_source_physx_limits(stage, tree)
+        offsets = author_shared_collision_offsets(stage, args.output, args.contact_offset, args.rest_offset)
         report = restore_and_validate(stage, tree, manifest)
+        report['collision_offsets'] = offsets
         report['usd_path'] = converter.usd_path
         stage.GetRootLayer().Save()
         (args.output / 'conversion-validation.json').write_text(json.dumps(report, indent=2, allow_nan=False) + '\n')

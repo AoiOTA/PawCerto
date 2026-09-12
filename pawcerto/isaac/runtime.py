@@ -29,6 +29,36 @@ def euler_xyz_quat(angles):
     return quat_mul(quat_mul(qx, qy), qz)
 
 
+@sim_utils.clone
+def spawn_umi_source_physics(prim_path, cfg, translation=None, orientation=None, **kwargs):
+    """Apply identical AS2 overrides before cloning; retain shared mesh geometry."""
+    from pxr import Usd, UsdPhysics, PhysxSchema
+    prim = sim_utils.spawn_from_usd(prim_path, cfg, translation, orientation, **kwargs)
+    stage = prim.GetStage()
+    instances = set()
+    for child in Usd.PrimRange(prim, Usd.TraverseInstanceProxies()):
+        if child.HasAPI(UsdPhysics.CollisionAPI) and child.IsInstanceProxy():
+            contact = child.GetAttribute('physxCollision:contactOffset').Get()
+            rest = child.GetAttribute('physxCollision:restOffset').Get()
+            if (contact is not None and math.isclose(contact, cfg.collision_props.contact_offset, rel_tol=1e-6)
+                    and rest == cfg.collision_props.rest_offset):
+                continue
+            parent = child.GetParent()
+            while not parent.IsInstance():
+                parent = parent.GetParent()
+            instances.add(str(parent.GetPath()))
+    for path in instances:
+        sim_utils.make_uninstanceable(path, stage=stage)
+    for child in Usd.PrimRange(prim):
+        if child.HasAPI(UsdPhysics.CollisionAPI):
+            sim_utils.modify_collision_properties(str(child.GetPath()), cfg.collision_props, stage=stage)
+        if child.HasAPI(UsdPhysics.RigidBodyAPI):
+            sim_utils.modify_rigid_body_properties(str(child.GetPath()), cfg.rigid_props, stage=stage)
+            PhysxSchema.PhysxContactReportAPI.Apply(child).CreateThresholdAttr(0.)
+    print(f'[UMI AS2] Source physics overrides complete; {len(instances)} geometry instances made uninstanceable', flush=True)
+    return prim
+
+
 class Go2Arx5Isaac:
     def __init__(self, config, joint_names, num_envs=1, device='cuda:0', usd_path=None, training=False,
                  ground_contact_diagnostics=False, force_signal="normal-contact", urdf_path=None):
@@ -77,7 +107,9 @@ class Go2Arx5Isaac:
                 physics_material=sim_utils.RigidBodyMaterialCfg(static_friction=1., dynamic_friction=1., restitution=0.)),
                 init_state=AssetBaseCfg.InitialStateCfg(pos=(0., 0., -.05)))
             robot = ArticulationCfg(prim_path='{ENV_REGEX_NS}/Robot',
-                spawn=sim_utils.UsdFileCfg(usd_path=str(usd_path), activate_contact_sensors=True,
+                spawn=sim_utils.UsdFileCfg(
+                    func=spawn_umi_source_physics if self.binding['name'] == 'as2_piper' else sim_utils.spawn_from_usd,
+                    usd_path=str(usd_path), activate_contact_sensors=True,
                     collision_props=collision_props,
                     rigid_props=sim_utils.RigidBodyPropertiesCfg(disable_gravity=False,
                         linear_damping=0., angular_damping=0., max_linear_velocity=1000.,
@@ -117,28 +149,30 @@ class Go2Arx5Isaac:
             setattr(scene_cfg, 'contact_' + name, ContactSensorCfg(prim_path=paths[name], update_period=0.,
                     filter_prim_paths_expr=filters))
         self.scene = InteractiveScene(scene_cfg)
-        from pxr import Usd, UsdPhysics, PhysxSchema
-        # Three imported mesh colliders are instance proxies; author their offsets
-        # on this scene's instances without modifying the referenced asset.
-        collider_instances = set()
-        for prim in self.sim.stage.Traverse(Usd.TraverseInstanceProxies()):
-            if (str(prim.GetPath()).startswith('/World/envs/')
-                    and prim.HasAPI(UsdPhysics.CollisionAPI) and prim.IsInstanceProxy()):
-                ancestor = prim.GetParent()
-                while not ancestor.IsInstance():
-                    ancestor = ancestor.GetParent()
-                collider_instances.add(str(ancestor.GetPath()))
-        for path in collider_instances:
-            sim_utils.make_uninstanceable(path, stage=self.sim.stage)
-        for prim in self.sim.stage.Traverse():
-            if str(prim.GetPath()).startswith('/World/envs/') and prim.HasAPI(UsdPhysics.CollisionAPI):
-                sim_utils.modify_collision_properties(str(prim.GetPath()), collision_props, stage=self.sim.stage)
-            if str(prim.GetPath()).startswith('/World/envs/') and prim.HasAPI(UsdPhysics.RigidBodyAPI):
-                # Lab v3.0.0-beta2.patch1 stops below the first rigid body.
-                # Keep these idempotent per-link writes for that release fallback.
-                sim_utils.modify_rigid_body_properties(
-                    str(prim.GetPath()), scene_cfg.robot.spawn.rigid_props, stage=self.sim.stage)
-                PhysxSchema.PhysxContactReportAPI.Apply(prim).CreateThresholdAttr(0.)
+        # Keep the established Go2 scene path; AS2 applies these same values before cloning.
+        if self.binding['name'] != 'as2_piper':
+            from pxr import Usd, UsdPhysics, PhysxSchema
+            # Three imported mesh colliders are instance proxies; author their offsets
+            # on this scene's instances without modifying the referenced asset.
+            collider_instances = set()
+            for prim in self.sim.stage.Traverse(Usd.TraverseInstanceProxies()):
+                if (str(prim.GetPath()).startswith('/World/envs/')
+                        and prim.HasAPI(UsdPhysics.CollisionAPI) and prim.IsInstanceProxy()):
+                    ancestor = prim.GetParent()
+                    while not ancestor.IsInstance():
+                        ancestor = ancestor.GetParent()
+                    collider_instances.add(str(ancestor.GetPath()))
+            for path in collider_instances:
+                sim_utils.make_uninstanceable(path, stage=self.sim.stage)
+            for prim in self.sim.stage.Traverse():
+                if str(prim.GetPath()).startswith('/World/envs/') and prim.HasAPI(UsdPhysics.CollisionAPI):
+                    sim_utils.modify_collision_properties(str(prim.GetPath()), collision_props, stage=self.sim.stage)
+                if str(prim.GetPath()).startswith('/World/envs/') and prim.HasAPI(UsdPhysics.RigidBodyAPI):
+                    # Lab v3.0.0-beta2.patch1 stops below the first rigid body.
+                    # Keep these idempotent per-link writes for that release fallback.
+                    sim_utils.modify_rigid_body_properties(
+                        str(prim.GetPath()), scene_cfg.robot.spawn.rigid_props, stage=self.sim.stage)
+                    PhysxSchema.PhysxContactReportAPI.Apply(prim).CreateThresholdAttr(0.)
         self.sim.reset()
         self.scene.update(self.dt)
         self.robot = self.scene['robot']
