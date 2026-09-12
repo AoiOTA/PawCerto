@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "pawcerto"
 version = "0.1.0.dev0"
-description = "UMI-on-Legs whole-body control on the original Go2 and ARX5"
+description = "Research framework for reinforcement-learning whole-body control of quadrupedal manipulators"
 requires-python = ">=3.10"
 dependencies = ["numpy", "torch", "scipy"]
 
@@ -16,3 +16,6 @@ analysis = ["matplotlib>=3.9"]
 [tool.setuptools.packages.find]
 include = ["pawcerto*"]
 namespaces = true
+
+[tool.setuptools.package-data]
+"pawcerto.methods.roboduet" = ["LICENSE", "LICENSES/*/LICENSE"]

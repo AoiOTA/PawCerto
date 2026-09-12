@@ -1,0 +1,49 @@
+"""Convert fixed RoboDuet source with the official Isaac Lab URDF importer."""
+import argparse
+from pathlib import Path
+import sys
+import xml.etree.ElementTree as ET
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+import runpy
+source_tree = runpy.run_path(str(ROOT / 'pawcerto/mujoco/roboduet_asset.py'))['source_tree']
+from isaaclab.app import AppLauncher
+parser = argparse.ArgumentParser()
+parser.add_argument('--output', type=Path, default=ROOT / 'outputs/roboduet-runtime-20260912/usd')
+AppLauncher.add_app_launcher_args(parser)
+args = parser.parse_args()
+args.output.mkdir(parents=True, exist_ok=True)
+launcher = AppLauncher(args)
+try:
+    import omni.kit.app
+    from isaaclab.sim.converters import UrdfConverter, UrdfConverterCfg
+    omni.kit.app.get_app().get_extension_manager().set_extension_enabled_immediate('isaacsim.asset.importer.urdf', True)
+    from isaacsim.asset.importer.urdf.impl.urdf_utils import merge_fixed_joints
+    tree = source_tree()
+    protected = [j.get('name') for j in tree.findall('joint') if j.get('dont_collapse') == 'true']
+    for joint in tree.findall('joint'):
+        if joint.get('name') in protected:
+            joint.set('type', 'floating')
+    original = args.output / 'source.urdf'
+    tree.write(original, encoding='utf-8', xml_declaration=True)
+    merged = args.output / 'merged.urdf'
+    merge_fixed_joints(str(original), str(merged))
+    tree = ET.parse(merged)
+    for joint in tree.findall('joint'):
+        if joint.get('name') in protected:
+            joint.set('type', 'fixed')
+    tree.write(merged, encoding='utf-8', xml_declaration=True)
+    converter = UrdfConverter(UrdfConverterCfg(asset_path=str(merged), usd_dir=str(args.output),
+        usd_file_name='robot.usd', force_usd_conversion=True, fix_base=False, merge_fixed_joints=False,
+        replace_cylinders_with_capsules=True, self_collision=True,
+        joint_drive=UrdfConverterCfg.JointDriveCfg(target_type='none')))
+    from pxr import Usd, UsdGeom, UsdPhysics
+    stage = Usd.Stage.Open(converter.usd_path)
+    for prim in stage.Traverse():
+        if prim.IsA(UsdGeom.Cylinder) and prim.HasAPI(UsdPhysics.CollisionAPI):
+            prim.SetTypeName('Capsule')
+    stage.GetRootLayer().Save()
+    (args.output / 'usd_path.txt').write_text(converter.usd_path + '\n')
+    print('ROBODUET_USD', converter.usd_path, flush=True)
+finally:
+    launcher.app.close(exit_code=int(sys.exc_info()[0] is not None))

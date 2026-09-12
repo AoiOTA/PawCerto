@@ -44,18 +44,31 @@ Lab/Gym numerical equality and a PhysX rebuild are not prerequisites.
 
 ## Deliverables and current execution state
 
-Updated on 2026-09-12 after the bounded diagnosis. Item 1 is complete: the
-non-perturbing 5 ms readers, matching Lab signals, ground/free comparison and
-one actual Lab PD-warmup-state intervention are documented in
-[the diagnosis](umi-contact-next-step.md). The intervention did not remove
-the head collision. No actionable control implementation defect or justified
-recipe change was identified; this diagnostic branch is stopped and no new
-long training is started. Item 2 therefore currently has a negative result,
-not a behavior-qualified repair.
+The RoboDuet second-method entrypoints now complete actual short execution across
+Stage 1, Stage 2 and an independent-process resume. All four optimizers and
+saved RNG/curriculum/history state were checked; five exported modules in both
+inference modes match saved real inputs exactly. This is integration evidence,
+not effective learning or identical resumed physics trajectories. Full RoboDuet
+training retains a separately chosen budget. See [training](roboduet-training.md).
+
+Item 1's original 5 ms contact and warmup diagnosis is complete; the
+initialization-only intervention did not remove the head collision and that
+branch is closed. The subsequent nonzero-state ground/free comparison found an
+actionable source-URDF/USD inertia-axis mismatch. Source-derived correction
+passed 25-body tensor checks and native mass-matrix/free-response checks, without
+modifying Isaac Lab or PhysX. The complete evidence is in
+[the diagnosis](umi-contact-next-step.md).
+
+Item 2 now executes one justified candidate under its existing conditional
+budget: corrected source-inertia asset, random seed 0, 4096 environments by
+24 rollout steps by 4000 updates, body-speed-v3 and joint1000 retained. This run
+also uses Item 3's 71 training IDs. Existing policies and old assets remain
+unchanged. Final acceptance still requires paired tracking and behavior evidence;
+the physics correction alone does not establish a head-impact repair.
 
 Item 3's grouping, ID selection and checkpoint provenance are implemented
-(71 train / 15 validation / 15 test), but full-budget split training and
-independent held-out behavior evaluation remain unfinished. Item 4's isolated
+(71 train / 15 validation / 15 test). Full-budget split training is now running;
+independent held-out behavior evaluation remains unfinished. Item 4's isolated
 CPU and Lab online installations and runtime entry checks have completed,
 including three short split-training updates across save/resume. Network
 recovery and one unintended extra resume update are retained in

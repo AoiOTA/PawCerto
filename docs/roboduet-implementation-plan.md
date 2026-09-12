@@ -1,6 +1,8 @@
 # RoboDuet 接入实施计划
 
-2026-09-12。本文是下一方法的实施准备，未执行下载、安装、物理探针或训练。项目最终目标、UMI 当前验收及后续方法顺序以 [project-plan.md](project-plan.md) 为准：先完成 UMI 当前阶段，再开展 Go1＋ARX5 的 RoboDuet 实现。UMI 已有三种子 4000 轮、双引擎评估和导出；最近干预未消除头部碰撞，独立 holdout 尚未完成，不能据此宣称 PawCerto 已满足发布条件。
+2026-09-12 更新：后续授权已允许 RoboDuet 与 UMI 并行推进。固定源码和资产、策略组件、官方 Lab runtime、任务奖励与课程、两阶段 PPO、恢复及五模块导出已实现；修正后的真实短运行完成 Stage 1、Stage 2 与独立进程恢复，共三次更新。参见 [训练与导出](roboduet-training.md)、[物理接线](roboduet-runtime.md) 和 [任务语义](roboduet-task.md)。这些结果尚不证明学习成功，完整学习预算未启动。
+
+下文保留**实施前的历史计划与当时资料状态**，其中“未下载”“未实现”“尚未运行”等表述不代表当前状态。项目最终目标、UMI 验收和后续方法顺序以 [project-plan.md](project-plan.md) 为准。
 
 ## 已知输入与证据边界
 

@@ -13,9 +13,9 @@ by this implementation status. KMA's independent release has completed as
 [v0.2.9](https://github.com/AoiOTA/Kiss-My-Agent/releases/tag/v0.2.9): candidate
 CI, public archive, isolated installation/upgrade, and fresh-session Skill
 discovery passed. The user explicitly keeps the local development installation
-`0.2.8+codex.20260912051546`; its eight relevant guidance/documentation files
-match the release. Continued KMA changes require an observed actionable issue,
-not a switch to the formal local build.
+at base version `0.2.8`; it has since received a local guidance development update.
+KMA development remains separate from PawCerto's researcher dependencies and
+public source deliverables.
 
 Acceptance clarification from the user on 2026-09-12: exact numerical equality between Lab and Gym is not required. The current objective is a working UMI port with preserved method semantics, real Lab learning, fixed-policy MuJoCo validation and honest performance/failure reporting. Engine residuals remain diagnostic limitations; they do not alone make the project incomplete. Deliberate physical configuration changes, including the relaxed joint-speed limit, remain explicit.
 
@@ -29,8 +29,12 @@ from 5.6033 rad/s to 1.488e-7 rad/s, identifying contact response as the dominan
 initial difference. Replacing the MuJoCo warmup pose/velocity with the actual
 Lab PD-warmup state did not eliminate the later head contact, so the
 initialization-only direction was stopped. This is a negative intervention
-result, not a behavior repair. Default physics, initialization, rewards and
-the existing policies are unchanged; no new long training was launched.
+result, not a behavior repair. That initialization-only branch is closed. A subsequent nonzero-torque
+comparison identified incorrect imported USD principal inertia axes. The
+source-tensor correction passed native validation; one new random-seed-0,
+71-train, 4096 by 24 by 4000 candidate is running with an explicitly selected
+corrected USD. Old assets, policies and results remain distinct. No new
+behavior-qualified policy or held-out result is claimed yet.
 
 The [grouped data implementation](umi-data-split.md) selects 71 train, 15
 validation and 15 test trajectories. It preserves the original source and
@@ -42,8 +46,15 @@ training/save/resume check using the 71 train IDs have run. The latter completed
 three updates: one initial update followed by two additional resume updates,
 one more than intended because the operator misread the additional-iteration
 argument. Execution is stopped. This checks entrypoints, not learning;
-full-budget split training and held-out behavior evaluation remain unfinished.
+full-budget split training is now running, and held-out behavior evaluation remains unfinished.
 See [public reproduction evidence](release-reproduction.md).
+
+RoboDuet now has implemented original-policy components, Go1/ARX5 runtime,
+rewards/curricula, two-stage PPO, save/resume, and five-module export. Corrected
+16-environment execution completed two updates and one resumed update, all exit
+0; export consumption on saved real inputs is exact in both modes. This does
+not demonstrate effective learning or identical physics trajectories after
+resume. See [RoboDuet training](roboduet-training.md).
 
 Current results: [all three fixed training seeds](umi-relaxed-seed-repetitions.md) have completed their 4000-iteration budgets, final MuJoCo/native evaluations and exported-package self-tests under body-speed-v3 and joint1000. Each uses 393,216,000 transitions. Final MuJoCo16 position errors are 10.169 / 12.300 / 12.499 mm, versus Official's 8.657 mm; all 48 final trajectories complete without inversion or numerical failure. Independent review found no new material integrity issue. This does not remove contact or broader stability limits: seed 1 has a sampled head contact of about 779 N in case 6, and its author-protocol latest500 includes two inverted early-terminated episodes. Author timeout fractions are 95.0% / 94.8% / 91.2%, versus Official's 97.8%. All random baselines, intermediate failures, nonfoot contact and protocol strata remain in the [combined report](../outputs/mujoco/umi_relaxed_body_speed_three_seed_summary/README.md); there is no checkpoint selection. The first UMI learning-and-fixed-policy-transfer loop is supported on the supplied trajectory pool, with contact, generalization and formal-acceptance limits explicitly retained.
 

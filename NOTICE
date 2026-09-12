@@ -9,6 +9,15 @@ Reference source revision: d75c9c182d8044dadf53043612da2ffbf1936a97.
 UMI-derived files retain their MIT attribution headers. PPO components retain
 their NVIDIA BSD-3-Clause notices and license terms in the corresponding files.
 
+RoboDuet: https://github.com/locomanip-duet/RoboDuet
+Reference source revision: a7e1528215c048199f90cb69ceb7749a1d745f28.
+The method adaptation retains the upstream MIT license (Guoping Pan, 2024)
+and the upstream legged_gym and rsl_rl BSD-3-Clause licenses under
+pawcerto/methods/roboduet/LICENSE and LICENSES/. The port preserves the
+automatic method's execution and learning semantics; its complete training
+state restoration is a PawCerto addition. Downloaded robot assets remain
+external inputs obtained by scripts/fetch_roboduet.py, not source deliverables.
+
 Isaac Lab, Isaac Sim, PhysX, MuJoCo, PyTorch and other dependencies retain their
 own licenses. Default installation uses official unmodified Lab/PhysX; it does
 not require KISS My Agent or a locally rebuilt physics engine.
