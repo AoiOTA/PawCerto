@@ -1,6 +1,6 @@
 # Using and extending PawCerto
 
-PawCerto's goal is a research framework for reinforcement learning of whole-body control on quadrupedal manipulators. Today the implemented path is **UMI-on-Legs on Go2 + ARX5**, with Isaac Lab/PhysX training, independent MuJoCo execution, and actor export. This guide describes that working path and its concrete extension points. RoboDuet on Go1 + ARX5 now also has method-specific entrypoints; see [its training and export guide](roboduet-training.md). Its short Stage 1/2/resume validation proves integration. [Actual fixed-policy evaluation](roboduet-evaluation-result.md) completes 2/9 full cases at checkpoint 0 and 0/9 at 1600, with worse same-prefix leg tracking at 1600; effective learning remains unverified. DeepWBC on Go1 + WidowX 250s completed corrected-terrain 21-update/500-step physical execution and independent actual-input export consumption; learning remains unproved. AS2 EDU + Piper H has an active 4096-environment, 4000-update UMI candidate and its actual model 0 fixed16 baseline; learned tracking and final policy transfer remain unverified. There is no method registry, robot plugin API or universal training command.
+PawCerto's goal is a research framework for reinforcement learning of whole-body control on quadrupedal manipulators. Today the implemented path is **UMI-on-Legs on Go2 + ARX5**, with Isaac Lab/PhysX training, independent MuJoCo execution, and actor export. This guide describes that working path and its concrete extension points. RoboDuet on Go1 + ARX5 now also has method-specific entrypoints; see [its training and export guide](roboduet-training.md). Its short Stage 1/2/resume validation proves integration. [Actual fixed-policy evaluation](roboduet-evaluation-result.md) completes 2/9 full cases at checkpoint 0 and 0/9 at 1600, with worse same-prefix leg tracking at 1600; effective learning remains unverified. DeepWBC on Go1 + WidowX 250s completed corrected-terrain 21-update/500-step physical execution and independent actual-input export consumption; learning remains unproved. AS2 EDU + Piper H completed its 4000-update UMI candidate: Lab tracking improved but 7/16 cases inverted, final MuJoCo transfer failed in all 16 cases, and export consumption failed. Stable WBC and sim2sim were not established. There is no method registry, robot plugin API or universal training command.
 
 The existing three training seeds establish learning and sim2sim results on the supplied trajectory pool, with remaining head-contact and stability problems. They do not establish held-out generalization, reliable whole-body control or real-hardware readiness. Read [current results](umi-current-result.md) and [public reproduction status](release-reproduction.md) before comparing a new experiment. KISS My Agent is optional developer tooling, not a user or runtime dependency.
 
@@ -13,7 +13,7 @@ Robot support means a measured method/robot/runtime combination, not just a load
 | Go2 + ARX5 | UMI-on-Legs | Actual training, Isaac Lab/MuJoCo evaluations and policy export; retain the reported stability and generalization limits |
 | Go1 + ARX5 | RoboDuet | Actual Stage 1/2/resume, export and fixed physical evaluation; early 0/1600 comparison shows no learning improvement; 10001/50000 endpoints pending |
 | Go1 + WidowX 250s | DeepWBC | Corrected full-terrain 21 updates and 500 policy steps in physical simulation; actual-input CPU export consumption; EE RMSE 0.47936 m and one signed-roll failure; learning unproved |
-| AS2 EDU + Piper H with stock gripper | UMI target-body adaptation | Shared-geometry repair preserves all 601 nominal control rows; full 4096 × 24 × 4000 run active, actual model 0 fixed16 completes 16/16; [model 500](as2-umi-model500-evaluation.md) has 13 numerical failures and three complete but inverted cases; final learning and transfer pending |
+| AS2 EDU + Piper H with stock gripper | UMI target-body adaptation | Completed 4096 × 24 × 4000 candidate; [final result](as2-umi-learning-result.md): Lab tracking improves with 7/16 inversions and degraded support; MuJoCo 16/16 BADQACC, zero complete cases; export consumption fails |
 | B2 + Z1 | UniFP, after the priority milestone | Original-source CPU integration; Isaac Lab execution pending |
 | B1 + Z1 | Learning Force Control, later expansion | Planned integration |
 
@@ -31,7 +31,10 @@ run and states the approximate sensor and position-only task limits.
 For AS2/Piper H, start with [source assets](as2-piper-assets.md) and [official Lab
 conversion](as2-piper-isaac.md), then use the [learning/evaluation protocol](as2-umi-learning-plan.md).
 That protocol specifies the actual run's model 0/500/4000 fixed16 comparisons,
-final paired Lab evaluation and independent export consumer. Run scripts from
+final paired Lab evaluation and independent export consumer. The [completed result](as2-umi-learning-result.md)
+records improved Lab tracking with inversions, failed MuJoCo transfer and failed
+export consumption. The one-candidate stop boundary is reached; the commands
+do not authorize another AS2 experiment or parameter change. Run scripts from
 the source checkout: a wheel does not bundle the scripts, vendor inputs or local
 experiment outputs. Coordinate simulator work with the assigned GPU operator;
 these examples do not authorize duplicate training services.
@@ -211,7 +214,7 @@ binding. Supplying a URDF alone does not adapt arbitrary robots or policies.
 and contact topology, and all three CLI path/recording/runtime-call blocks on
 CPU without starting Kit. These input checks alone do not establish GPU execution
 or learning with an arbitrary replacement asset. AS2 has separate measured
-[physical execution and current training evidence](as2-umi-learning-plan.md).
+[physical execution and completed candidate evidence](as2-umi-learning-result.md).
 
 | Owner | Inputs → outputs and responsibilities |
 |---|---|
@@ -240,7 +243,7 @@ Before robot execution, inspect all selected IDs, finite target values, shapes, 
 
 ## 6. Adapt another robot or method
 
-A different URDF is **not** sufficient to support a new quadrupedal manipulator. UMI now has two concrete [robot bindings](../pawcerto/methods/umi_on_legs/robot_binding.py): the validated Go2 + ARX5 default and the nominal [AS2/Piper H adaptation](as2-umi-adaptation.md). The latter has CPU/MuJoCo basic-control evidence and a corrected 3-second Lab observation with four ground-supported feet throughout its last second. Its first Lab update started inverted because of an AS2-only quaternion conversion error; that evidence is retained as an unsuccessful adaptation record. After repair, a fresh 24-transition update had zero termination/collision metrics and 2.458 mean normal-contact supported feet, but 0.705 m position error. These earlier results qualify the bounded runtime path. The later [shared-geometry repair and full-size learning run](as2-umi-learning-plan.md) preserve the nominal control arrays exactly and establish the actual training-run model 0 fixed16 baseline; model 500/4000 and final transfer remain pending. Keep the working baseline intact and implement further adaptations in the actual owners:
+A different URDF is **not** sufficient to support a new quadrupedal manipulator. UMI now has two concrete [robot bindings](../pawcerto/methods/umi_on_legs/robot_binding.py): the validated Go2 + ARX5 default and the nominal [AS2/Piper H adaptation](as2-umi-adaptation.md). The latter has CPU/MuJoCo basic-control evidence and a corrected 3-second Lab observation with four ground-supported feet throughout its last second. Its first Lab update started inverted because of an AS2-only quaternion conversion error; that evidence is retained as an unsuccessful adaptation record. After repair, a fresh 24-transition update had zero termination/collision metrics and 2.458 mean normal-contact supported feet, but 0.705 m position error. These earlier results qualify the bounded runtime path. The later [shared-geometry repair and full-size learning run](as2-umi-learning-plan.md) preserve the nominal control arrays exactly. The [completed 4000-update result](as2-umi-learning-result.md) improves Lab tracking while worsening support and inversion; all final MuJoCo cases and export consumption fail numerically. This does not establish stable WBC or successful transfer. Keep the working baseline intact and implement further adaptations in the actual owners:
 
 | Adaptation | Changes that are presently required | Evidence before training conclusions |
 |---|---|---|

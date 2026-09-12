@@ -33,7 +33,7 @@ Each row compares the same elapsed prefix; row durations differ. BADQACC details
 
 The saved iteration-500 training log reports EE error 0.0611876 m / 0.4501084 rad, mean root height 0.250109 m and mean net-supported feet 2.977325. Its `terminated` value is 5.666667: the mean count of `done` environments per policy step across 24 steps, or 136 reset events over that rollout. It includes configured contact termination and timeouts/safe-bound exits; it is not a fall count or episode success rate. Neighboring iterations 495/505 report 6.958333/6.166667 such events per step. The training log does not separate inversions or termination causes, so it cannot establish their absence. These are stochastic training-rollout aggregates collected before the checkpoint's PPO update, not the fixed-policy nominal MuJoCo protocol.
 
-The discrepancy is observed; this evaluation alone does not locate a training bug, identify an engine-transfer cause or establish final learning failure. The authorized single candidate continues to update 4000 with unchanged task, rewards and physics. Model4000 and final paired Lab evaluation remain pending.
+The discrepancy is observed; this evaluation alone does not locate a training bug, identify an engine-transfer cause or establish final learning failure. The unchanged candidate subsequently completed 4000 updates; the [final result](as2-umi-learning-result.md) records final Lab/MuJoCo and export outcomes.
 
 
 ## Bounded first-failure review
@@ -71,6 +71,6 @@ must not be recomputed from the later endpoint state to allege a PD error.
 No source, physics or training parameters changed from this review. A future
 causal comparison would isolate the early case07 Piper speed-constraint
 response; post-step `qvel` clipping would not establish PhysX-equivalent
-constraints. The planned final Lab comparison remains required.
+constraints. The planned final Lab comparison is now recorded in the [final result](as2-umi-learning-result.md).
 
 Artifacts: `runs/as2_umi_seed0_4096_4000_fixed16_500/summary.json`, `fixed16-audit.json`, `model0-paired-comparison.json`, and all `case_*.json`/`case_*.npz`. The paired JSON retains root motion, arm ranges, support and exact failure details for each case. Original evaluator exit status was 2; audit success only verifies preserved identities and arrays.

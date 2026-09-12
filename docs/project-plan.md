@@ -158,10 +158,11 @@ retains one signed-roll failure, poor tracking and the approximate six-axis
 signal; the older freefall run is excluded from physical-task conclusions.
 This bounded completion does not authorize larger DeepWBC training.
 
-AS2/Piper H's authorized candidate is now running: **fresh seed 0, 4096
-environments × 24 transitions × 4000 updates**, with the current nominal
-physical inputs and original UMI supplied tossing task. It runs alongside
-RoboDuet's 50000-update experiment in separate services under the GPU operator.
+AS2/Piper H's authorized candidate completed **fresh seed 0, 4096
+environments × 24 transitions × 4000 updates = 393,216,000 transitions**,
+with the nominal physical inputs and original UMI supplied tossing task.
+Its training service exited 0; RoboDuet remains in training under its original
+50000-update budget and assigned GPU operator.
 The first full-size attempt failed with OOM; preserving shared collision
 geometry repaired initialization without reducing the budget or changing the
 method. All 601 nominal control rows matched the previous corrected run exactly.
@@ -175,8 +176,14 @@ was 0.51053 m / 1.63250 rad. Its entire model state was measured equal to the
 older one-environment baseline; the formal comparison still uses the new run's
 own checkpoint. The [model 500 fixed16 evaluation](as2-umi-model500-evaluation.md)
 completed with 13 numerical failures and three full but inverted cases.
-The single candidate continues to its specified 4000 endpoint; model 4000
-and final Lab/export results remain pending.
+The [final model 4000 result](as2-umi-learning-result.md) completes the prescribed
+comparisons: Lab mean EE error improves from 0.510769 m / 1.625607 rad to
+0.119318 m / 0.363301 rad, but 7/16 cases invert and ground support deteriorates.
+MuJoCo has 16/16 BADQACC failures and zero complete cases. Actor export matches
+the saved weights, but verification and independent consumption fail numerically;
+matching invalid prefixes does not qualify a valid exported-policy rollout.
+The one-candidate stop boundary is reached with a negative stable-control and
+transfer outcome. Do not automatically add AS2 experiments or change parameters.
 No extra seeds, reward search, extended training or hardware execution are
 automatically included. A robot-name change, completed batch or successful
 asset load is not a completed learned transfer.

@@ -1,6 +1,6 @@
 # AS2/Piper-H UMI: one-candidate learning and evaluation protocol
 
-**Recorded status (2026-09-13): the repaired full-size run entered PPO updates; its actual model 0 fixed16 baseline completed.** The candidate is fresh seed 0, **4096 environments × 24 transitions × 4000 PPO updates**, using the current nominal AS2 EDU/Piper-H robot and the original supplied tossing task. This document specifies the executable run and its comparisons. It does not report learned AS2 control or hardware readiness.
+**Recorded status (2026-09-13): the full 4000-update candidate and all prescribed evaluations/export attempts are complete.** The [final result](as2-umi-learning-result.md) records improved average Lab tracking with 7/16 inverted cases, 16/16 numerical failures in final MuJoCo fixed16, and failed independent export consumption despite exact actor/prefix identity. This protocol was executed on fresh seed 0, **4096 environments × 24 transitions × 4000 PPO updates**, with the nominal AS2 EDU/Piper-H and original supplied tossing task. Stable whole-body control, successful sim2sim and hardware readiness were not established.
 
 The preceding [adaptation work](as2-umi-adaptation.md) established corrected initial orientation, source/FK agreement, 3-second nominal Lab basic control and one complete fresh PPO update. The earlier inverted-initial-pose run remains an invalid adaptation record. Neither the corrected short update nor zero-action PD establishes trajectory learning.
 
@@ -85,7 +85,7 @@ Artifacts are `runs/as2_umi_model0_fixed16_seed2027/{summary.json,baseline-audit
 
 **The main learning comparison must use the new 4096-environment run's own `model_0.pt`.** Runtime randomization consumes random numbers before actor construction, so the same seed with 1 versus 4096 environments does not imply identical initial weights. Retain the completed baseline above as a pretraining engineering reference; do not silently substitute it for the actual training-run baseline.
 
-## Training command — executing attempt 2
+## Training command — attempt 2 completed
 
 Run from the repository root in the established Lab environment, after the launch conditions above:
 
@@ -107,7 +107,7 @@ The GPU operator owns the service and resource allocation; the command is not au
 
 The full run's actual `model_0.pt` was independently evaluated with the fixed16 command and exited 0: all 16 cases completed 17 seconds, with zero numerical failures, inverted cases or sampled nonfoot-contact cases above 1 N. Mean EE error is 0.5105255 m / 1.6324972 rad; mean ground-supported feet is 3.941696 and zero-support endpoints are 1.0601%. Every saved target exactly equals the frozen fixed16 array, and every saved numeric array is finite.
 
-The checkpoint records iteration 0, zero transitions and 4096 environments. Its SHA-256 is `2f8a8b5519edc062486a994a023c4af267ee17a9b19b49c7a81900ebdd2e7718`. Actual tensor comparison found its entire model state equal to the earlier one-environment model 0, explaining the identical rollout metrics; this equality was measured rather than inferred from seed equality. The formal comparison uses this new run's checkpoint and artifacts: `runs/as2_umi_seed0_4096_4000_fixed16_0/{summary.json,fixed16-audit.json,case_*.json,case_*.npz}`. Model500 has since been evaluated as described below; model4000 and final Lab/export results remain pending.
+The checkpoint records iteration 0, zero transitions and 4096 environments. Its SHA-256 is `2f8a8b5519edc062486a994a023c4af267ee17a9b19b49c7a81900ebdd2e7718`. Actual tensor comparison found its entire model state equal to the earlier one-environment model 0, explaining the identical rollout metrics; this equality was measured rather than inferred from seed equality. The formal comparison uses this new run's checkpoint and artifacts: `runs/as2_umi_seed0_4096_4000_fixed16_0/{summary.json,fixed16-audit.json,case_*.json,case_*.npz}`. All three checkpoints and final Lab/export attempts are now recorded in the [final result](as2-umi-learning-result.md).
 
 ## Fixed checkpoints: 0, 500 and 4000
 
@@ -161,7 +161,7 @@ The actual model500 fixed16 MuJoCo command exited **2**: **13/16 numerical failu
 
 On the **same three complete cases only**, mean EE error increases from model0's 0.563450 m / 1.642654 rad to model500's 5.391835 m / 2.069168 rad; mean ground-supported feet drops from 3.941107 to 0.298783. These are not overall fixed16 means. The [model500 result](as2-umi-model500-evaluation.md) gives all 16 matched-prefix rows, support/contact limits and existing training-side context. Artifacts are `runs/as2_umi_seed0_4096_4000_fixed16_500/{summary.json,fixed16-audit.json,model0-paired-comparison.json,case_*.json,case_*.npz}`.
 
-Training-side iteration500 reports 0.0611876 m / 0.4501084 rad aggregate EE error and 136 `done` events over 24 policy steps, with no inversion-specific or termination-cause breakdown. This is a different stochastic training protocol; the discrepancy alone does not establish its cause. There is no authorized model500 early-stop threshold. Continue the unchanged single candidate to 4000 and retain this negative intermediate result.
+Training-side iteration500 reports 0.0611876 m / 0.4501084 rad aggregate EE error and 136 `done` events over 24 policy steps, with no inversion-specific or termination-cause breakdown. This is a different stochastic training protocol; the discrepancy alone does not establish its cause. There is no authorized model500 early-stop threshold. The unchanged single candidate subsequently reached 4000; this negative intermediate result is retained.
 
 ## Final Lab fixed-policy comparison and export
 
@@ -201,3 +201,5 @@ The export keeps the actual AS2 binding, joint order, controller, actor and sour
 ## Completion boundary
 
 Deliver the training log/config/identities and model 0/500/4000 checkpoints; fixed16 per-case arrays, metrics and failure accounting at all three points; final paired Lab readout; export and consumer-verification evidence; and a short interpretation of tracking, physical support, contact and engine differences. Stop at this one candidate and 4000 updates. Failed learning is a valid result to report; it does not automatically authorize more seeds, longer training, altered rewards, a simpler task or hardware execution.
+
+Execution reached the stop boundary: training exited 0 at 393,216,000 transitions; model0/500/4000 CPU evaluators exited 0/2/2; final paired Lab exited 0 with seven final inverted cases; export creation exited 0 but verification exited 1 and both independent consumers exited 2. See the [final result](as2-umi-learning-result.md) for the complete evidence and limits. No extra candidate or experiment is implied by these failures.
