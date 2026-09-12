@@ -2,6 +2,8 @@
 
 调研日期：2026-09-12。这是新增候选的支线研究，不变更已批准的 UMI → RoboDuet → DeepWBC → MLM 主线，不启动新的安装、训练或本体迁移。
 
+**后续决策（2026-09-12）：用户已批准将 UniFP、Learning Force Control、Multi-critic Twist Tracking、ReLIC 纳入最终框架计划，并将 LeggedManip_Lab 纳入多本体工程参考。** 已同步到[框架总计划](../../docs/project-plan.md)。下文保留本次调研时的候选判断与证据；批准纳入规划不代表代码已接入、许可条件已解除或方法已复现。
+
 结论：**优先把 UniFP 和 Learning Force Control 纳入力控制候选；把 Multi-critic Twist Tracking 纳入下一代学习机制候选；把 ReLIC 留作许可受限的多肢协作研究候选。** VBC 可提供 RL＋IK 混合对照。工程层面应认真参考 LeggedManip_Lab，但它不是已验证可替代 PawCerto 的现成答案。
 
 这次从轨迹／运动、力／接触操作、框架与部署三个方向进行 Exa 检索，21 次查询合计 151 条检索结果位，包含重复命中；随后核对作者论文、项目页面及官方仓库实际文件。以下保留 9 项方法候选、2 项工程参考，另解释 2 项不进入核心名单的工作。未实际安装、训练或加载这些候选权重，因而“找到代码”不代表已完成复现。
@@ -73,6 +75,6 @@ TAC-LOCO只核实到[作者项目](https://purdue-tracelab.github.io/tacloco.git
 
 ## 接下来如何使用这份调研
 
-近期继续现有UMI验收与RoboDuet准备。新增方法先列入候选，不同时开长训练。若后续选择力控方向，建议先定UniFP或Learning Force Control的原本体、低层任务、信号和评测边界；若选择任务冲突与速度控制，先补Multi-critic实施材料。ReLIC与其他材料未齐项保持独立研究身份。
+近期继续现有UMI验收与RoboDuet准备。用户选定的新增方法已进入最终框架计划，不同时开长训练。力控方向先定UniFP及Learning Force Control的原本体、低层任务、信号和评测边界；任务冲突与速度控制先补Multi-critic实施材料。ReLIC按许可受限的可选研究集成推进，LeggedManip_Lab作为独立工程参考。其余未选定工作仍留在候选池。
 
 任何新方法实际进入后，都要分别验证来源与许可、受支持的任务维度、真实执行图、有限更新／恢复入口、充分训练、固定策略评测与导出消费。别把界面数量、代码存在或演示视频当成稳定WBC与复现成功。

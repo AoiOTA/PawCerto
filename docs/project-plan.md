@@ -110,6 +110,49 @@ reference investigations rather than restarting them. Extract shared code only
 when a second real method consumes it. Common-condition research and
 AS2/PiperH transfer follow established methods; hardware remains out of scope.
 
+### Approved framework expansion (2026-09-12)
+
+The user has also approved UniFP, Learning Force Control, Multi-critic Twist
+Tracking and ReLIC as parts of the final framework scope, with
+LeggedManip_Lab as a separate engineering reference. This expands the planned
+capabilities beyond pose tracking to force/compliance, end-effector velocity
+tracking and interlimb cooperation. These are planned integrations, not
+implemented or reproduced methods. Source inspections and their dated limits
+are recorded in [the candidate research report](../exa-results/wbc-rl-candidates-2026-09-12/report.md).
+
+| Component | Intended place in PawCerto | First integration boundary |
+|---|---|---|
+| UniFP | Low-level unified end-effector force/position control | Preserve the B2/Z1 task, force estimator, supervision and stage transitions. Public training code exists; policy availability and the separate high-level imitation pipeline remain unverified. |
+| Learning Force Control | Force tracking and variable-compliance baseline | Preserve B1/Z1, history adaptation and the actual 17-action control boundary. Verify local checkpoint loading and distinguish actuator-network files from policy weights. |
+| Multi-critic Twist Tracking | End-effector velocity tracking and separate value learning for leg, arm and contact objectives | Official training code has not been located. Obtain implementation materials or explicitly scope an independent paper-based implementation before coding; do not present its advantages as DeepWBC advantage mixing. |
+| ReLIC | Optional research integration for arm/leg manipulation and changing support roles | Retain model-based manipulation plus learned support. The inspected code has a non-commercial research license; keep it outside the default broadly reusable distribution unless appropriate permission is established. Including the method in the plan does not authorize relicensing its code. |
+| LeggedManip_Lab | Engineering reference for robot configuration, task entrypoints and deployment interfaces | Inspect working consumers and applicable licenses before reusing specific code. Robot configurations do not count as paper-method reproductions, and version compatibility still needs execution evidence. |
+
+The existing UMI → RoboDuet → DeepWBC route remains the near-term sequence;
+MLM retains its material-availability gate. UniFP is the first proposed force
+control integration, followed by Learning Force Control as a comparison.
+Multi-critic and ReLIC can advance when their material and permission
+dependencies are ready, without blocking other methods. Method-specific plans
+must establish their training budgets before starting large runs.
+
+Evaluate each new capability using its actual commands and execution path:
+force tracking needs force error, transients, contact establishment/loss and
+position/orientation tracking under interaction; compliance needs response to
+specified disturbances; twist tracking needs linear and angular velocity errors
+alongside pose drift and locomotion; interlimb cooperation needs role changes,
+task completion and support behavior. Report falls, unintended head impact,
+numerical failures, saturation and full-duration completion alongside these
+metrics. Set numeric acceptance thresholds with the relevant method protocol,
+not by transferring UMI's pose-error thresholds to different tasks.
+
+Shared components should represent only the commands, sensors and action
+semantics that working methods actually consume. Required force signals must
+come from supported public APIs or explicitly validated reconstruction; UMI's
+foot-force reconstruction is not automatically equivalent to end-effector
+external-force supervision. Preserve original-method results and common-task
+comparisons separately. The default installation remains official unmodified
+Isaac Lab/PhysX, with no mandatory engine rebuild.
+
 Stop uninformative repeated probes, unsupported reward searches, automatic
 budget extensions, and test-set tuning. Failed independent tests block a
 behavior-qualified PawCerto release. Repair installation/publication failures
