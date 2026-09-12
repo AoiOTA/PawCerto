@@ -133,9 +133,75 @@ and training/evaluation path; asset preparation or a short integration run
 does not qualify either transfer as learned control. See the current
 [UMI robot adaptation](as2-umi-adaptation.md) and [RoboDuet evaluation protocol](roboduet-evaluation.md).
 
-After UMI's current stage, continue RoboDuet on Go1/ARX5 with its real two-stage
-and five-module execution path, then DeepWBC with its actual supported target
-dimensions and adaptation/advantage-mixing mechanisms. MLM waits for sufficient
+### Updated execution priority (2026-09-12)
+
+The user has placed AS2 EDU / Piper H simulation transfer immediately after
+the usable shared framework built from UMI, RoboDuet and DeepWBC. Finish those
+methods' actual execution and evaluation paths, then extract only components
+with multiple real consumers. Preserve each method's observations, rewards and
+learning algorithm. Framework completion requires:
+
+- Robot descriptions that explicitly identify joint order, mounting transform,
+  inertia, limits, actuator/control parameters and available sensor signals.
+- Working entrypoints selecting method, robot, configuration, checkpoint and
+  simulation engine without silently changing the selected method.
+- Reproducible evaluation records containing commands, states, errors and
+  termination reasons, including incomplete or failed episodes.
+- Exported policies that actually execute through their corresponding adapters.
+- Public-source installation and external-input instructions that a new
+  researcher can execute.
+
+DeepWBC's corrected original-terrain 21-update, export and fixed 500-step
+execution, independent CPU policy consumption and local source delivery are
+complete. The [final report](experiments/deepwbc-reconstructed-runtime-20260912.md)
+retains one signed-roll failure, poor tracking and the approximate six-axis
+signal; the older freefall run is excluded from physical-task conclusions.
+This bounded completion does not authorize larger DeepWBC training.
+
+AS2/Piper H's authorized candidate is now running: **fresh seed 0, 4096
+environments × 24 transitions × 4000 updates**, with the current nominal
+physical inputs and original UMI supplied tossing task. It runs alongside
+RoboDuet's 50000-update experiment in separate services under the GPU operator.
+The first full-size attempt failed with OOM; preserving shared collision
+geometry repaired initialization without reducing the budget or changing the
+method. All 601 nominal control rows matched the previous corrected run exactly.
+The earlier inverted-initial-pose update and OOM attempt remain retained.
+
+The [executable AS2 learning protocol](as2-umi-learning-plan.md) preserves
+model 0/500/4000 fixed16 evaluations, final paired Lab/MuJoCo comparison and
+export. The actual 4096-environment run's model 0 baseline completed 16/16 full
+17-second cases with no numerical failure or inversion, but mean tracking error
+was 0.51053 m / 1.63250 rad. Its entire model state was measured equal to the
+older one-environment baseline; the formal comparison still uses the new run's
+own checkpoint. Model 500/4000 and final Lab/export results remain pending.
+No extra seeds, reward search, extended training or hardware execution are
+automatically included. A robot-name change, completed batch or successful
+asset load is not a completed learned transfer.
+
+UniFP, Learning Force Control and the other expansion methods remain in the
+overall scope but follow this shared-framework and AS2/Piper H milestone.
+Preserve completed CPU integration work; it does not justify starting their
+large training runs ahead of the newly prioritized work.
+
+The user also requires protecting the 32 GB workstation after memory pressure
+terminated the desktop application. Large simulator/training processes run in
+an independent systemd user service, outside the desktop application's cgroup.
+The initial diagnostic limits were `MemoryHigh=16G`, `MemoryMax=18G`, and
+`MemorySwapMax=1G`, verified in the actual cgroup. Preserving shared collision
+geometry then allowed the same 4096-environment RoboDuet run to initialize and
+perform real updates at about 7.3 GB service memory. The user authorized lifting
+the temporary RAM limit once the issue was found; `MemoryHigh` and `MemoryMax`
+were changed to infinity on that live service without restarting it. The
+independent service and 1 GiB swap limit remain. Observe later-stage resource
+use; do not disable system memory protection or blindly repeat an allocation
+failure. If a future method cannot fit, state its measured limit and establish
+an explicit environment-count/sample-budget adjustment before claiming its
+original experiment is running.
+
+The established near-term method sequence is UMI, RoboDuet on Go1/ARX5 with
+its two-stage and five-module execution path, and DeepWBC with its actual
+supported target dimensions and adaptation/advantage-mixing mechanisms.
+Their current execution and learning evidence is distinguished above. MLM waits for sufficient
 materials or an explicitly identified reimplementation. Use the completed
 reference investigations rather than restarting them. Extract shared code only
 when a second real method consumes it. Common-condition research and

@@ -1,8 +1,40 @@
 # Using and extending PawCerto
 
-PawCerto's goal is a research framework for reinforcement learning of whole-body control on quadrupedal manipulators. Today the implemented path is **UMI-on-Legs on Go2 + ARX5**, with Isaac Lab/PhysX training, independent MuJoCo execution, and actor export. This guide describes that working path and its concrete extension points. RoboDuet on Go1 + ARX5 now also has method-specific entrypoints; see [its training and export guide](roboduet-training.md). Its short Stage 1/2/resume validation proves integration, while effective learning remains unverified. DeepWBC, MLM and further robots remain planned. There is no method registry, robot plugin API or universal training command.
+PawCerto's goal is a research framework for reinforcement learning of whole-body control on quadrupedal manipulators. Today the implemented path is **UMI-on-Legs on Go2 + ARX5**, with Isaac Lab/PhysX training, independent MuJoCo execution, and actor export. This guide describes that working path and its concrete extension points. RoboDuet on Go1 + ARX5 now also has method-specific entrypoints; see [its training and export guide](roboduet-training.md). Its short Stage 1/2/resume validation proves integration. [Actual fixed-policy evaluation](roboduet-evaluation-result.md) completes 2/9 full cases at checkpoint 0 and 0/9 at 1600, with worse same-prefix leg tracking at 1600; effective learning remains unverified. DeepWBC on Go1 + WidowX 250s completed corrected-terrain 21-update/500-step physical execution and independent actual-input export consumption; learning remains unproved. AS2 EDU + Piper H has an active 4096-environment, 4000-update UMI candidate and its actual model 0 fixed16 baseline; learned tracking and final policy transfer remain unverified. There is no method registry, robot plugin API or universal training command.
 
 The existing three training seeds establish learning and sim2sim results on the supplied trajectory pool, with remaining head-contact and stability problems. They do not establish held-out generalization, reliable whole-body control or real-hardware readiness. Read [current results](umi-current-result.md) and [public reproduction status](release-reproduction.md) before comparing a new experiment. KISS My Agent is optional developer tooling, not a user or runtime dependency.
+
+## Robot coverage and planned transfer
+
+Robot support means a measured method/robot/runtime combination, not just a loadable asset. The current priority is:
+
+| Combination | Method or purpose | Evidence reached |
+|---|---|---|
+| Go2 + ARX5 | UMI-on-Legs | Actual training, Isaac Lab/MuJoCo evaluations and policy export; retain the reported stability and generalization limits |
+| Go1 + ARX5 | RoboDuet | Actual Stage 1/2/resume, export and fixed physical evaluation; early 0/1600 comparison shows no learning improvement; 10001/50000 endpoints pending |
+| Go1 + WidowX 250s | DeepWBC | Corrected full-terrain 21 updates and 500 policy steps in physical simulation; actual-input CPU export consumption; EE RMSE 0.47936 m and one signed-roll failure; learning unproved |
+| AS2 EDU + Piper H with stock gripper | UMI target-body adaptation | Shared-geometry repair preserves all 601 nominal control rows; full 4096 × 24 × 4000 run active, actual model 0 fixed16 completes 16/16 with 0.51053 m / 1.63250 rad error; learning and final transfer pending |
+| B2 + Z1 | UniFP, after the priority milestone | Original-source CPU integration; Isaac Lab execution pending |
+| B1 + Z1 | Learning Force Control, later expansion | Planned integration |
+
+Go2 + Airbot Play (MLM) remains conditional on missing author training material.
+Spot + arm (ReLIC) is an optional research integration subject to its original
+noncommercial license. No all-method/all-robot compatibility or physical
+hardware execution is implied. See the [execution plan](project-plan.md) and
+[AS2/Piper H asset assumptions](as2-piper-assets.md).
+
+For DeepWBC, follow the method-specific [source preparation and training](deepwbc-training.md)
+and [fixed-policy evaluation/export](deepwbc-evaluation.md). The [final report](experiments/deepwbc-reconstructed-runtime-20260912.md)
+separates corrected supported-contact execution from the withdrawn zero-contact
+run and states the approximate sensor and position-only task limits.
+
+For AS2/Piper H, start with [source assets](as2-piper-assets.md) and [official Lab
+conversion](as2-piper-isaac.md), then use the [learning/evaluation protocol](as2-umi-learning-plan.md).
+That protocol specifies the actual run's model 0/500/4000 fixed16 comparisons,
+final paired Lab evaluation and independent export consumer. Run scripts from
+the source checkout: a wheel does not bundle the scripts, vendor inputs or local
+experiment outputs. Coordinate simulator work with the assigned GPU operator;
+these examples do not authorize duplicate training services.
 
 ## 1. Run the existing path
 
@@ -17,7 +49,7 @@ Use the repository root as the working directory unless a command explicitly cha
 | Convert Lab asset | [scripts/convert_umi_usd.py](../scripts/convert_umi_usd.py), using the Lab launcher environment below | Derived URDF/USD and the path recorded in `reference/isaac/go2_arx5/usd_path.txt` |
 | Train or continue | [scripts/train_umi.py](../scripts/train_umi.py), config, trajectory file and measured joint order | `config.json`, `metrics.jsonl`, and full `model_N.pt` checkpoints |
 | Evaluate | Nominal Lab, author-protocol Lab, or MuJoCo entries in section 3 | Per-condition metrics and recorded execution; protocols must be reported separately |
-| Export | [scripts/export_umi.py](../scripts/export_umi.py) and the full checkpoint | `actor.ts`, execution `config.json`, and `joint_names.json` in a new directory |
+| Export | [scripts/export_umi.py](../scripts/export_umi.py) and the full checkpoint | `actor.ts`, execution `config.json`, `joint_names.json`, and source identities in `export.json` in a new directory |
 
 The shortest published-policy CPU execution, after installing the documented CPU environment, is:
 
@@ -48,7 +80,12 @@ cd "$PAWCERTO_ROOT/third_party/IsaacLab-develop-sim610"
 
 The [root training recipe](../README.md#train-the-current-physical-variant-in-isaac-lab) reproduces the existing physical variant, including the explicit `joint_velocity_limit_override_rad_s=1000.0`. Without that override the original config retains native URDF speed limits. Do not describe those two physical configurations as the same experiment. `--force-signal reconstructed-solver` is the training entry's default; `normal-contact` selects the earlier proxy. Their meanings and resume compatibility are documented in [force/runtime semantics](umi-reconstructed-force-training.md).
 
-The following is a **new split-training example**, not an executed result. It carries forward the existing body-speed-v3 reconstructed-force baseline and its explicit 1000 rad/s joint-speed override; it does not start a different native-limit recipe. The current project must finish the behavior-recipe decision before starting this long split run. If that decision changes the baseline, document the change and prepare a new input configuration first.
+The following creates a **new researcher run** of the split-training recipe. The
+project's own 71-ID, 4000-update run has completed; its results and known test
+instability are in [the split-trained result](umi-source-inertia-result.md).
+The example carries forward body-speed-v3 reconstructed forces and the explicit
+1000 rad/s joint-speed override. Select the matching source-inertia asset from
+the conversion step and preserve its identity when resuming.
 
 Using the Lab shell established above, create the input in a new run directory. This changes only the already documented speed override in the released config; `exist_ok=False` preserves existing experiment directories:
 
@@ -133,11 +170,48 @@ python -m pawcerto.mujoco.evaluate \
 
 The export verifies CPU actor reload parity before writing. `actor.ts` emits raw actions; it does **not** include observations, history, delay, scaling, PD or physics. Consumers must retain those from the execution config and adapters. The author Lab evaluator also needs critic/policy-standard-deviation data from a full checkpoint, so an actor-only directory is insufficient there.
 
+New UMI exports also contain `export.json`, recording hashes of the actual source
+weights, source execution config and exported actor, plus available embedded
+training metadata. This record supports provenance inspection; the actor-only
+loader still does not qualify a training partition from adjacent JSON.
+
 Training-partition qualification comes from the actual full checkpoint's embedded config, not its adjacent execution config. Missing metadata and actor-only exports are conservatively unqualified for held-out reporting. Keep the full checkpoint for validation/test identity even after exporting. A legacy full-pool policy evaluated on these IDs remains a full-pool policy.
 
 ## 4. Where the data and control flow live
 
 These are concrete implementation boundaries, not a stable generic backend API:
+
+Three shared components now have existing method/simulator consumers:
+[`pawcerto.artifacts.file_identity`](../pawcerto/artifacts.py) records input bytes
+without imposing a checkpoint schema;
+[`pawcerto.robots.go1_arx5`](../pawcerto/robots/go1_arx5.py) supplies the same source
+URDF, 20 simulation-joint ordering and default pose to RoboDuet's Lab and MuJoCo
+asset paths. The robot module imports no simulator or tensor library. Its 20
+simulation joints do not redefine the method's 18 policy actions; and
+[`pawcerto.robots.urdf.read_joint_limits`](../pawcerto/robots/urdf.py) reads named
+lower/upper/effort/velocity limits in the caller's order for the UMI and RoboDuet
+Lab adapters. The methods retain their own controllers, rewards, histories and
+checkpoint loaders.
+
+UMI's `train_umi.py`, `eval_umi.py` and `run_umi_isaac.py` accept `--urdf-path`
+alongside `--usd-path`. Supply a matching merged URDF when changing the USD:
+the USD provides simulator geometry, while the URDF provides UMI's source
+velocity limits, contact-link topology and physical-randomization source data.
+Each path uses the explicit argument first, the saved asset path second, then
+the original Go2/ARX5 workspace default. Existing records without a URDF path
+therefore retain the original URDF default. Resolved input paths and byte hashes
+are recorded in `pawcerto_asset` (training/evaluation config) or `asset_identity`
+(rollout report). Recording both files does not establish that they match.
+UMI still requires positive source velocity limits and retains its existing
+explicit velocity override. The saved UMI robot binding supplies the root, TCP and named-body/joint
+references. Go2/ARX5 remains the default; AS2/Piper H has an explicit nominal
+binding. Supplying a URDF alone does not adapt arbitrary robots or policies.
+
+`tests/test_robot_inputs.py` checks both real source URDFs, alternate UMI limits
+and contact topology, and all three CLI path/recording/runtime-call blocks on
+CPU without starting Kit. These input checks alone do not establish GPU execution
+or learning with an arbitrary replacement asset. AS2 has separate measured
+[physical execution and current training evidence](as2-umi-learning-plan.md).
 
 | Owner | Inputs → outputs and responsibilities |
 |---|---|
@@ -150,7 +224,7 @@ These are concrete implementation boundaries, not a stable generic backend API:
 
 The current actor/action path has 18 joint actions, ordered by the measured original asset mapping. Policy cadence is four 5 ms physics steps. Reset includes one zero-action policy step; history sentinels and pose-update cadence affect the policy. Training supports sparse and dense reward/task stepping; the author evaluator changes that configuration intentionally. Do not move updates between these clocks as an unnoticed “cleanup.”
 
-`RobotState` contains root angular velocity and gravity in the root frame, joint positions/velocities in policy order, a 4×4 end-effector pose in the environment-local world frame, and episode time. Lab removes each environment's world origin. The current end-effector frame is reconstructed from `link6` and a fixed transform; using its body origin instead changes the task. MuJoCo exposes xyzw quaternions at the adapter boundary and corrects link-origin linear velocity relative to the inertial center.
+`RobotState` contains root angular velocity and gravity in the root frame, joint positions/velocities in policy order, a 4×4 end-effector pose in the environment-local world frame, and episode time. Lab removes each environment's world origin. The Go2 end-effector frame uses `link6` and its original fixed transform; AS2 uses the saved Piper gripper TCP binding. Using a body origin in place of either TCP changes the task. MuJoCo exposes xyzw quaternions at the adapter boundary and corrects link-origin linear velocity relative to the inertial center.
 
 ## 5. Introduce new target trajectories
 
@@ -166,13 +240,13 @@ Before robot execution, inspect all selected IDs, finite target values, shapes, 
 
 ## 6. Adapt another robot or method
 
-A different URDF is **not** sufficient to support a new quadrupedal manipulator. The current runtimes and several method tensors are specific to Go2 + ARX5. Keep the working baseline intact and implement the necessary changes in the actual owners:
+A different URDF is **not** sufficient to support a new quadrupedal manipulator. UMI now has two concrete [robot bindings](../pawcerto/methods/umi_on_legs/robot_binding.py): the validated Go2 + ARX5 default and the nominal [AS2/Piper H adaptation](as2-umi-adaptation.md). The latter has CPU/MuJoCo basic-control evidence and a corrected 3-second Lab observation with four ground-supported feet throughout its last second. Its first Lab update started inverted because of an AS2-only quaternion conversion error; that evidence is retained as an unsuccessful adaptation record. After repair, a fresh 24-transition update had zero termination/collision metrics and 2.458 mean normal-contact supported feet, but 0.705 m position error. These earlier results qualify the bounded runtime path. The later [shared-geometry repair and full-size learning run](as2-umi-learning-plan.md) preserve the nominal control arrays exactly and establish the actual training-run model 0 fixed16 baseline; model 500/4000 and final transfer remain pending. Keep the working baseline intact and implement further adaptations in the actual owners:
 
 | Adaptation | Changes that are presently required | Evidence before training conclusions |
 |---|---|---|
 | Asset and dynamics | Lab conversion and runtime asset paths, fixed-link collapse rules, collision shapes, inertias, actuators and limits; MuJoCo conversion's URDF-relative mesh resolution and base/freejoint assumptions | Independent FK, frame and inertia comparisons; no invented mass from collapsed marker links; correct collision geometry |
 | Joint/action mapping | Lab joint-name mapping; MuJoCo `JOINT_NAMES`, state indices and current 18-action buffers; controller offsets/scales/gains/torque/delay arrays | Per-joint mapping and sign checks, bounded commanded torque and real action-delay timing |
-| End-effector and observations | `link6` offset/rotation, base and foot/body names, `RobotState`, observation scales/history and actor/critic input sizes | Matching target/state frames and observation values; old weights load only when dimensions **and semantics** agree |
+| End-effector and observations | Saved binding's TCP offset/rotation, root and foot/body names, `RobotState`, observation scales/history and actor/critic input sizes | Matching target/state frames and observation values; old weights load only when dimensions **and semantics** agree |
 | Training semantics | The environment's 18-action buffers and `actor[:,42:-18]` task slice, body/shape ordering in the privileged critic, mass/COM/friction randomization, body-name constraints and reset/termination | Real randomized properties reach the critic; reward and timeout behavior reflect intended new motion; no placeholder sensor values |
 | Force reconstruction and contacts | Actual articulation topology, inertias, solved motion and foot indices in Lab; ground filters and contact classifications in both engines | Supported public-API signal validation and failure propagation; document differences from the original force sensor rather than requiring patched PhysX |
 | Evaluation and export | Robot-specific evaluator state/frame/contact assumptions, actor dimensions and execution bundle joint names | Frozen-policy independent execution, full motion and failure reporting, exported actor parity and a fresh consumer |

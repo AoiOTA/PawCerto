@@ -1,5 +1,27 @@
 # Current development status
 
+Current priority: complete the authorized RoboDuet and AS2 EDU/Piper H learning
+and evaluation runs. DeepWBC's bounded 21-update/export/500-step path and source
+delivery are complete; its learning outcome remains unproved. Hardware execution
+remains outside scope. UniFP's CPU implementation is retained for later expansion.
+See [the updated sequence](project-plan.md#updated-execution-priority-2026-09-12).
+
+RoboDuet's seed-0, 4096-environment, 50000-update learning experiment has begun
+real PPO updates after an initialization-memory repair. The first two attempts
+did not produce updates: one was killed by kernel OOM and another coincided
+with systemd-oomd terminating the desktop application's shared process group.
+The repaired run preserves collision-geometry sharing and runs in an independent
+service. Fixed physical evaluation of checkpoints 0/1600 has now completed:
+2/9 versus 0/9 full 20-second cases, with worse same-prefix leg tracking at 1600.
+Every early failure triggers body height, with no inversion in these prefixes.
+Both policies use released-arm `official_play`; this is not a causal Stage 1
+ablation. Full learning and the 10001/50000 endpoints remain pending. See the
+[early physical readout and video](roboduet-evaluation-result.md).
+
+DeepWBC's corrected complete terrain run finished 21 updates and a fixed 500-step physical evaluation, with contact in all 500 samples. EE RMSE was 0.47936 m and forward-velocity MAE 0.49878 m/s; one signed-roll failure was followed by an unfinished 455-sample episode. Independent installed-package and TorchScript consumers matched checkpoint actions on all actual observations within the recorded tolerance. This is bounded execution and export evidence, not learning success. The earlier zero-contact/freefall run is excluded from physical-task conclusions. The six-axis foot signal remains approximate on official, unmodified Isaac Lab/PhysX. See [the final corrected-terrain report](experiments/deepwbc-reconstructed-runtime-20260912.md), [training](deepwbc-training.md) and [evaluation/export](deepwbc-evaluation.md).
+
+The AS2/Piper H fresh seed-0, 4096-environment × 24-step × 4000-update UMI candidate is running in an independent service alongside RoboDuet's 50000-update experiment. After the original OOM, preserving shared collision geometry allowed the unchanged full-size candidate to enter PPO updates. The repaired nominal control run matched all 601 recorded rows exactly. Its actual 4096-environment model 0 completed all 16 full 17-second MuJoCo cases with no numerical failure or inversion, but mean tracking error was 0.51053 m / 1.63250 rad. This is an untrained baseline; model 500/4000 comparisons, final paired Lab evaluation and final export remain pending. The earlier AS2 inverted-initial-pose update is also retained as an invalid adaptation record. Installation/TCP values remain nominal assumptions. See [the executable learning protocol and actual baseline](as2-umi-learning-plan.md), [geometry repair](as2-piper-isaac.md) and [asset assumptions](as2-piper-assets.md).
+
 The [approved continuation plan](project-plan.md) starts from the completed
 three-seed UMI baseline. On 2026-09-12 the user selected seed-matched tracking
 preservation and correction of uncontrolled behavior, with controllable calf
@@ -61,7 +83,9 @@ rewards/curricula, two-stage PPO, save/resume, and five-module export. Corrected
 16-environment execution completed two updates and one resumed update, all exit
 0; export consumption on saved real inputs is exact in both modes. This does
 not demonstrate effective learning or identical physics trajectories after
-resume. See [RoboDuet training](roboduet-training.md).
+resume. The separate [fixed physical evaluation](roboduet-evaluation-result.md)
+retains first-failure 5 ms states and provides a CPU saved-state comparison video.
+See [RoboDuet training](roboduet-training.md).
 
 Current results: [all three fixed training seeds](umi-relaxed-seed-repetitions.md) have completed their 4000-iteration budgets, final MuJoCo/native evaluations and exported-package self-tests under body-speed-v3 and joint1000. Each uses 393,216,000 transitions. Final MuJoCo16 position errors are 10.169 / 12.300 / 12.499 mm, versus Official's 8.657 mm; all 48 final trajectories complete without inversion or numerical failure. Independent review found no new material integrity issue. This does not remove contact or broader stability limits: seed 1 has a sampled head contact of about 779 N in case 6, and its author-protocol latest500 includes two inverted early-terminated episodes. Author timeout fractions are 95.0% / 94.8% / 91.2%, versus Official's 97.8%. All random baselines, intermediate failures, nonfoot contact and protocol strata remain in the [combined report](../outputs/mujoco/umi_relaxed_body_speed_three_seed_summary/README.md); there is no checkpoint selection. The first UMI learning-and-fixed-policy-transfer loop is supported on the supplied trajectory pool, with contact, generalization and formal-acceptance limits explicitly retained.
 
@@ -172,7 +196,7 @@ Earlier MuJoCo tumble results used an incorrectly ordered observation vector. Th
 
 Earlier Lab results with the extra marker mass are also retained as diagnostics. Measured geometry/control parity and collision properties do not establish complete numerical equivalence between engines. Randomized inertia and internal shape ordering have not been exhaustively verified over all parameters. Neither the Pilot nor current from-scratch progress establishes stable learned WBC or hardware readiness.
 
-Read-only preparation for later methods is complete in the [RoboDuet reference check](roboduet-reference.md) and [DeepWBC reference check](deepwbc-reference.md). Both have source asset references but no policy package was found in the inspected official public entries. DeepWBC's default configuration additionally enables position tracking with only three nonzero arm action scales, not arbitrary 6D pose tracking. Neither method has been implemented or run here; UMI remains the active training route.
+Read-only preparation for later methods is complete in the [RoboDuet reference check](roboduet-reference.md) and [DeepWBC reference check](deepwbc-reference.md). Both have source asset references but no policy package was found in the inspected official public entries. DeepWBC's default configuration additionally enables position tracking with only three nonzero arm action scales, not arbitrary 6D pose tracking. This was the earlier reference-only stage; current RoboDuet implementation and actual 0/1600 physical results are reported above. See the current DeepWBC status above for its separate evidence level.
 
 The bounded [MLM material check](mlm-reference.md) identified the exact paper and its described mechanisms, but did not locate an official complete repository, policy weights, matched Go2 + Airbot Play asset, full task trajectories or AMP reference data in the inspected public entries. Related FastUMI Pro examples are not established as the MLM training set. These missing materials remain a later-method limitation and do not block UMI work.
 
