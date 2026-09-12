@@ -1,8 +1,18 @@
 # PawCerto 本地研究候选包
 
-当前候选已整理并验证完整性，**不是正式发布，也不是行为达标证明**。三种子 final4000 训练、双引擎评测及导出结果保留；seed1 撞头、作者式协议两次倒置和未见轨迹评测缺失仍阻止正式行为验收。候选无公共下载地址，下面均为本地文件。
+最新补充候选已完成训练、最终评测、导出实测及归档，**不是正式发布，也未通过行为验收**。修正惯量后的 train71 seed0 完成4000次更新，但 MuJoCo 固定16例跟踪退化；全部15条test各尝试一次，14条完成，ID1倒置、头部触地并触发数值错误。详见[本轮完整结果](umi-source-inertia-result.md)。候选无公共下载地址，下面均为本地文件。
 
-## 当前交付
+## 最新 split-trained 补充交付
+
+- [补充归档](../outputs/umi-source-inertia-train71-20260912/candidate/pawcerto-source-inertia-candidate-20260912.tar.gz)：13,304,920 bytes，约12.69 MiB。
+- [清单](../outputs/umi-source-inertia-train71-20260912/candidate/manifest.json)：151个选取文件，包含本轮自训final4000、CPU导出、实际训练身份、4000行训练指标、双引擎/未见测试结果、5 ms摘要和对比视频。
+- [完整性验证](../outputs/umi-source-inertia-train71-20260912/candidate/archive-verification.json)：154个归档成员全部读取并逐一匹配SHA256；另3项为说明、清单及校验表。
+- [三栏视频](../outputs/umi-source-inertia-train71-20260912/video/comparison_fixed4000_case06.mp4)：旧seed0、历史seed1、新train71 seed0，同一预选case6的0–17秒保存状态。纯CPU可视化，无推理或物理积分；整片解码及四帧目检通过。
+- [导出实测](../outputs/umi-source-inertia-train71-20260912/export-consumer-17s/verification.json)：validation ID7完整17秒，actor.ts正常消费者与完整checkpoint的7组数组逐元素一致。
+
+补充归档SHA256：`0d1b9c2702a19e1ca72143cb90dd9839bbcb8a905303bd7eb34e551d013f057a`。整理时源码HEAD为`df133eb`；实际训练源码身份另行保留，不能倒推。归档不含机器人/USD/MJCF网格、原始trajectory pickle、每例原始NPZ、上游权重、vendor二进制或本地KMA配置；不构成独立安装包或完整原始实验归档。历史三种子包未覆盖，保留如下。
+
+## 历史三种子交付
 
 - [含当前视频的候选归档](../outputs/release-candidate-20260912/visual-mesh-v3/candidate/pawcerto-research-candidate-20260912.tar.gz)：14,141,762 bytes（约13.49 MiB）。
 - [文件清单](../outputs/release-candidate-20260912/visual-mesh-v3/candidate/manifest.json)：137个实际选取文件，合计31,637,511 bytes；逐文件保存大小与SHA256。
@@ -52,4 +62,4 @@ v3三个visual旋转分别为壳体(pi/2,0,0)、左指(0,pi/2,0)、右指(pi,-pi
 
 安装复现由[独立交付状态](release-reproduction.md)说明；归档完整性不等于空缓存安装或新机训练成功。运行还需要匹配的源码、输入、观测/历史/延迟/PD适配器，`actor.ts`不是可直接上实机的控制器。KMA本地配置不在包内，研究者不需安装KMA。
 
-候选目录总新增约235 MiB，包含初始无视频快照、旧碰撞外观视频候选、v2原visual候选、v3夹爪方向修正候选及本地可视化转换文件，低于2 GiB预算。所有旧候选及旧视频完整保留；当前入口是`visual-mesh-v3/candidate/`。原数据未覆盖或删除，本项整理没有执行动态模拟、训练、push或发布。
+候选目录总新增约235 MiB，包含初始无视频快照、旧碰撞外观视频候选、v2原visual候选、v3夹爪方向修正候选及本地可视化转换文件，低于2 GiB预算。所有旧候选及旧视频完整保留；该历史包入口是`visual-mesh-v3/candidate/`。原数据未覆盖或删除，本项整理没有执行动态模拟、训练、push或发布。
