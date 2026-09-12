@@ -196,6 +196,8 @@ class UmiPolicy:
         # Execution config beside a model can be overwritten by another run.
         # Only the weights' embedded metadata qualifies their training partition.
         self.training_selection = None
+        self.training_asset = None
+        self.training_runtime = None
         if source.is_dir() and (directory / 'actor.ts').exists():
             self.actor = torch.jit.load(str(directory / 'actor.ts'), map_location=device).eval()
         else:
@@ -208,6 +210,8 @@ class UmiPolicy:
             checkpoint = torch.load(source if source.is_file() else directory / 'model.pt', map_location='cpu', weights_only=False)
             from .data_split import checkpoint_training_selection
             self.training_selection = checkpoint_training_selection(checkpoint)
+            self.training_asset = checkpoint.get('config', {}).get('pawcerto_asset')
+            self.training_runtime = checkpoint.get('config', {}).get('pawcerto_runtime')
             self.actor.load_state_dict({k[6:]: v for k, v in checkpoint['model_state_dict'].items() if k.startswith('actor.')})
         for parameter in self.actor.parameters():
             parameter.requires_grad_(False)

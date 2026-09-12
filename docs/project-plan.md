@@ -59,16 +59,21 @@ passed 25-body tensor checks and native mass-matrix/free-response checks, withou
 modifying Isaac Lab or PhysX. The complete evidence is in
 [the diagnosis](umi-contact-next-step.md).
 
-Item 2 now executes one justified candidate under its existing conditional
+Item 2 completed one justified candidate under its existing conditional
 budget: corrected source-inertia asset, random seed 0, 4096 environments by
 24 rollout steps by 4000 updates, body-speed-v3 and joint1000 retained. This run
 also uses Item 3's 71 training IDs. Existing policies and old assets remain
-unchanged. Final acceptance still requires paired tracking and behavior evidence;
-the physics correction alone does not establish a head-impact repair.
+unchanged. Final MuJoCo fixed16 tracking regressed, and test ID 1 inverted,
+struck its head and triggered BADQACC; only 14 of 15 test cases completed. The
+candidate fails the existing acceptance criteria. No extra training or
+test-driven recipe changes follow automatically. See [the final candidate
+result](umi-source-inertia-result.md).
 
 Item 3's grouping, ID selection and checkpoint provenance are implemented
-(71 train / 15 validation / 15 test). Full-budget split training is now running;
-independent held-out behavior evaluation remains unfinished. Item 4's isolated
+(71 train / 15 validation / 15 test). Full-budget split training completed,
+the original iteration-4000 candidate was frozen after validation, and every
+test ID was attempted once. The failed test prefix is excluded from complete
+trajectory means; the complete 15-case test result is a failure. Item 4's isolated
 CPU and Lab online installations and runtime entry checks have completed,
 including three short split-training updates across save/resume. Network
 recovery and one unintended extra resume update are retained in

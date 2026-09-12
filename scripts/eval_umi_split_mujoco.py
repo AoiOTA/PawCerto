@@ -15,6 +15,7 @@ def main():
     parser.add_argument('--trajectory', type=Path, default=Path('reference/data/tossing.pkl'))
     parser.add_argument('--split-manifest', type=Path, required=True)
     parser.add_argument('--partition', choices=('validation', 'test'), default='validation')
+    parser.add_argument('--substep-summary', action='store_true', help='Aggregate existing 5ms contact trace, saturation and ground-point speed without saving raw JSONL')
     parser.add_argument('--seconds', type=float, default=17.)
     parser.add_argument('--seed', type=int, default=2027)
     parser.add_argument('--output', type=Path, required=True)
@@ -32,9 +33,15 @@ def main():
     (args.output/'data_identity.json').write_text(json.dumps(identity, indent=2)+'\n')
     results = []
     for index, trajectory_id in enumerate(ids):
+        summary = None
+        if args.substep_summary:
+            from scripts.trace_umi_contacts import SubstepContactSummary
+            summary = SubstepContactSummary((args.checkpoint.parent if args.checkpoint.is_file() else args.checkpoint)/'config.json')
         result = evaluate(args.checkpoint, args.trajectory, args.seconds, args.seed, policy=policy,
                           positions=positions[index:index+1], rotations=rotations[index:index+1],
-                          raw_output=args.output/f'trajectory_{trajectory_id:03d}.npz')
+                          raw_output=args.output/f'trajectory_{trajectory_id:03d}.npz', substep_trace=summary)
+        if summary is not None:
+            (args.output/f'trajectory_{trajectory_id:03d}-substeps.json').write_text(json.dumps(summary.result(), indent=2, allow_nan=False)+'\n')
         result.update(case_index=index, trajectory_id=trajectory_id)
         (args.output/f'trajectory_{trajectory_id:03d}.json').write_text(json.dumps(result, indent=2)+'\n')
         results.append({key: value for key, value in result.items() if not key.endswith('records')})

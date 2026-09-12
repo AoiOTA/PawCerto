@@ -8,8 +8,11 @@ itself a failure. Optional 5 ms contact/execution diagnostics and grouped data
 splits are implemented; isolated installation and training/save/resume entry
 checks have completed. These
 results are separate from the completed baseline below.
-No behavior-qualified new policy, independent holdout result, or PawCerto public release is claimed
-by this implementation status. KMA's independent release has completed as
+The corrected-inertia, 71-train candidate completed 4000 updates, but failed
+tracking preservation and the frozen-model test: 14/15 trajectories completed;
+test ID 1 inverted, had head-ground impact and ended in BADQACC. No complete
+15-case test mean or behavior-qualified PawCerto release is claimed. See
+[the current split-trained result](umi-source-inertia-result.md). KMA's independent release has completed as
 [v0.2.9](https://github.com/AoiOTA/Kiss-My-Agent/releases/tag/v0.2.9): candidate
 CI, public archive, isolated installation/upgrade, and fresh-session Skill
 discovery passed. The user explicitly keeps the local development installation
@@ -32,9 +35,10 @@ initialization-only direction was stopped. This is a negative intervention
 result, not a behavior repair. That initialization-only branch is closed. A subsequent nonzero-torque
 comparison identified incorrect imported USD principal inertia axes. The
 source-tensor correction passed native validation; one new random-seed-0,
-71-train, 4096 by 24 by 4000 candidate is running with an explicitly selected
-corrected USD. Old assets, policies and results remain distinct. No new
-behavior-qualified policy or held-out result is claimed yet.
+71-train, 4096 by 24 by 4000 candidate completed using an explicitly selected
+corrected USD. Old assets, policies and results remain distinct. The frozen
+candidate failed final behavior acceptance; the physics correction is not a
+policy-stability repair.
 
 The [grouped data implementation](umi-data-split.md) selects 71 train, 15
 validation and 15 test trajectories. It preserves the original source and
@@ -46,7 +50,8 @@ training/save/resume check using the 71 train IDs have run. The latter completed
 three updates: one initial update followed by two additional resume updates,
 one more than intended because the operator misread the additional-iteration
 argument. Execution is stopped. This checks entrypoints, not learning;
-full-budget split training is now running, and held-out behavior evaluation remains unfinished.
+full-budget split training and the once-only full test attempt are complete;
+one test trajectory failed. No training extension or test-driven tuning is authorized.
 See [public reproduction evidence](release-reproduction.md).
 
 RoboDuet now has implemented original-policy components, Go1/ARX5 runtime,

@@ -1,5 +1,6 @@
 """Train original UMI PPO on the original robot in Isaac Lab PhysX."""
 import argparse
+import hashlib
 import json
 from pathlib import Path
 import sys
@@ -14,6 +15,7 @@ def main():
     parser.add_argument('--config',type=Path,default=ROOT/'reference/checkpoints/tossing/ours/config.json')
     parser.add_argument('--trajectory',type=Path,default=ROOT/'reference/data/tossing.pkl')
     parser.add_argument('--split-manifest', type=Path, help='Grouped manifest; training always uses train partition')
+    parser.add_argument('--usd-path', type=Path, help='Explicit robot USD or USD-path text file; otherwise use the recorded asset, then the workspace default')
     parser.add_argument('--joint-names',type=Path,required=True,help='Official Gym DOF names JSON, queried from original asset')
     parser.add_argument('--num-envs',type=int,default=4096)
     parser.add_argument('--iterations',type=int,default=None,help='Default: original config max_iterations')
@@ -36,12 +38,21 @@ def main():
         import random
         import numpy as np
         import torch
-        from pawcerto.isaac.runtime import Go2Arx5Isaac
+        from pawcerto.isaac.runtime import DEFAULT_USD, Go2Arx5Isaac
         from pawcerto.methods.umi_on_legs.training import UmiTrainer, load_config
         from pawcerto.methods.umi_on_legs.training.isaac_env import UmiIsaacTrainingEnv
         from pawcerto.methods.umi_on_legs.training.semantics import runtime_contract,require_resume_contract
         random.seed(args.seed); np.random.seed(args.seed); torch.manual_seed(args.seed)
         config=load_config(args.config)
+        source_path=args.resume or args.weights
+        source_checkpoint=torch.load(source_path,map_location='cpu',weights_only=False) if source_path else None
+        source_asset=(source_checkpoint.get('config',{}).get('pawcerto_asset') if source_checkpoint is not None else config.get('pawcerto_asset'))
+        usd_path=Path(args.usd_path or (source_asset or {}).get('usd_path') or DEFAULT_USD)
+        if usd_path.suffix == '.txt':
+            usd_path=Path(usd_path.read_text().strip())
+        usd_path=usd_path.resolve()
+        config['pawcerto_asset']=dict(usd_path=str(usd_path),
+                                    usd_sha256=hashlib.sha256(usd_path.read_bytes()).hexdigest())
         if config['env']['tasks']['reaching']['sequence_sampler'].get('trajectory_selection') and not args.split_manifest:
             raise ValueError('Saved split config requires --split-manifest; refusing silent full-pool training')
         from pawcerto.methods.umi_on_legs.data_split import configure_selection
@@ -50,10 +61,8 @@ def main():
         config['env']['cfg']['env']['num_envs']=args.num_envs
         config['pawcerto_runtime']=runtime_contract(
             args.force_signal, config.get('joint_velocity_limit_override_rad_s'))
-        source_path=args.resume or args.weights
         source_runtime=None
         if source_path:
-            source_checkpoint=torch.load(source_path,map_location='cpu',weights_only=False)
             source_selection=source_checkpoint.get('config',{}).get('env',{}).get('tasks',{}).get('reaching',{}).get('sequence_sampler',{}).get('trajectory_selection')
             if selection != source_selection:
                 raise ValueError('Resume/weight initialization must preserve the training partition; start from scratch for a new split')
@@ -64,9 +73,10 @@ def main():
         config['training_initialization']=dict(
             mode='resume' if args.resume else 'weights' if args.weights else 'random',
             checkpoint=str(source_path.resolve()) if source_path else None,
-            source_pawcerto_runtime=source_runtime)
+            source_pawcerto_runtime=source_runtime,
+            source_pawcerto_asset=source_asset if source_path else None)
         runtime=Go2Arx5Isaac(config,json.loads(args.joint_names.read_text()),args.num_envs,args.device,
-                           training=True,force_signal=args.force_signal)
+                           usd_path=usd_path,training=True,force_signal=args.force_signal)
         env=UmiIsaacTrainingEnv(runtime,config,args.trajectory,args.seed)
         trainer=UmiTrainer(env,config,args.device)
         if args.resume:

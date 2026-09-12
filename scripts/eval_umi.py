@@ -1,5 +1,6 @@
 """Evaluate a full UMI checkpoint with saved inputs plus author eval semantics."""
 import argparse
+import hashlib
 import json
 from pathlib import Path
 import sys
@@ -13,6 +14,7 @@ if str(ROOT) not in sys.path:
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--checkpoint',type=Path,required=True,help='Full model_N.pt or official directory containing model.pt and config.json')
+    parser.add_argument('--usd-path',type=Path,help='Explicit robot USD or USD-path text file; otherwise use the recorded asset, then the workspace default')
     parser.add_argument('--trajectory',type=Path,default=ROOT/'reference/data/tossing.pkl')
     parser.add_argument('--split-manifest',type=Path)
     parser.add_argument('--partition',choices=('validation','test'),default='validation')
@@ -37,7 +39,7 @@ def main():
         import random
         import numpy as np
         import torch
-        from pawcerto.isaac.runtime import Go2Arx5Isaac
+        from pawcerto.isaac.runtime import Go2Arx5Isaac,DEFAULT_USD
         from pawcerto.methods.umi_on_legs.training import build_algorithm,load_config
         from pawcerto.methods.umi_on_legs.training.isaac_env import UmiIsaacTrainingEnv
         from pawcerto.methods.umi_on_legs.training.evaluation import author_eval_config,evaluate_completed_episodes
@@ -54,10 +56,16 @@ def main():
             args.force_signal, config.get('joint_velocity_limit_override_rad_s'))
         config['evaluation_weights']=dict(checkpoint=str(checkpoint_path.resolve()),
                                          training_pawcerto_runtime=checkpoint_runtime)
-        config['env']['headless']=args.headless
+        checkpoint_asset=checkpoint.get('config',{}).get('pawcerto_asset')
+        usd_path=Path(args.usd_path or (checkpoint_asset or {}).get('usd_path') or DEFAULT_USD)
+        if usd_path.suffix == '.txt':
+            usd_path=Path(usd_path.read_text().strip())
+        usd_path=usd_path.resolve()
+        config['pawcerto_asset']=dict(usd_path=str(usd_path),usd_sha256=hashlib.sha256(usd_path.read_bytes()).hexdigest())
+        config['env']['headless']=not launcher.has_window
         args.output.mkdir(parents=True,exist_ok=True)
         (args.output/'resolved_config.json').write_text(json.dumps(config,indent=2))
-        runtime=Go2Arx5Isaac(config,json.loads(args.joint_names.read_text()),250,args.device,training=True,
+        runtime=Go2Arx5Isaac(config,json.loads(args.joint_names.read_text()),250,args.device,usd_path=usd_path,training=True,
                            ground_contact_diagnostics=args.ground_contact_diagnostics,
                            force_signal=args.force_signal)
         env=UmiIsaacTrainingEnv(runtime,config,args.trajectory,args.seed)
@@ -72,6 +80,8 @@ def main():
         lag_substeps=max(0,history_frames-2)
         report.update(checkpoint=str(checkpoint_path.resolve()),seed=args.seed,
                       engine='Isaac Lab PhysX',
+                      asset_identity=config['pawcerto_asset'],
+                      checkpoint_training_asset=checkpoint.get('config',{}).get('pawcerto_asset'),
                       protocol='Checkpoint configuration plus author eval semantics',
                       trajectory=str(args.trajectory.resolve()),
                       trajectory_pool=(selection['partition'] if selection else 'Full input pool; no holdout selection'),

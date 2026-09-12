@@ -1,5 +1,6 @@
 """Run the released UMI actor on the matching Go2+ARX5 PhysX articulation."""
 import argparse
+import hashlib
 import json
 from pathlib import Path
 import sys
@@ -11,13 +12,16 @@ if str(ROOT) not in sys.path:
 parser = argparse.ArgumentParser()
 parser.add_argument('--checkpoint', type=Path, default=ROOT / 'reference/checkpoints/tossing/ours')
 parser.add_argument('--compare-checkpoint', type=Path, action='append', default=[])
+parser.add_argument('--usd-path', type=Path, help='Explicit robot USD or USD-path text file; otherwise use the recorded asset, then the workspace default')
 parser.add_argument('--trajectory', type=Path, default=ROOT / 'reference/data/tossing.pkl')
 parser.add_argument('--joint-names', type=Path, required=True, help='JSON list from the original Gym asset query')
+parser.add_argument('--target-sequences', type=Path, help='Saved NPZ positions/rotations for exact paired targets; bypasses trajectory sampling')
 parser.add_argument('--num-envs', type=int, default=4)
 parser.add_argument('--steps', type=int, default=1000)
 parser.add_argument('--seed', type=int, default=0)
 parser.add_argument('--domain-randomization', action='store_true', help='Paired original physical/reset/PD/noise/push/transport distribution')
 parser.add_argument('--contact-trace', type=Path, help='Optional 5 ms existing sensor readout JSONL; no physics changes')
+parser.add_argument('--contact-summary', action='store_true', help='Read existing sensors each 5 ms step for head/contact, inversion and ground-support summaries')
 parser.add_argument('--trace-case', type=int, default=6)
 parser.add_argument('--output', type=Path, default=ROOT / 'reference/isaac/rollout.json')
 AppLauncher.add_app_launcher_args(parser)
@@ -26,12 +30,22 @@ launcher = AppLauncher(args)
 trace_stream = None
 try:
     import torch
+    import numpy as np
     from pawcerto.methods.umi_on_legs import UmiPolicy
-    from pawcerto.isaac.runtime import Go2Arx5Isaac
+    from pawcerto.isaac.runtime import Go2Arx5Isaac, DEFAULT_USD
     policy = UmiPolicy(args.checkpoint, device=args.device)
+    saved_asset = policy.training_asset
+    if args.checkpoint.is_dir() and (args.checkpoint / 'actor.ts').is_file():
+        # The export config determines execution; its training asset remains unknown.
+        saved_asset = policy.config.get('pawcerto_asset')
+    usd_path = Path(args.usd_path or (saved_asset or {}).get('usd_path') or DEFAULT_USD)
+    if usd_path.suffix == '.txt':
+        usd_path = Path(usd_path.read_text().strip())
+    usd_path = usd_path.resolve()
+    asset_identity = dict(usd_path=str(usd_path), usd_sha256=hashlib.sha256(usd_path.read_bytes()).hexdigest())
     torch.manual_seed(args.seed)
     env = Go2Arx5Isaac(policy.config, json.loads(args.joint_names.read_text()), args.num_envs, args.device,
-                      training=args.domain_randomization, ground_contact_diagnostics=True)
+                      usd_path=usd_path, training=args.domain_randomization, ground_contact_diagnostics=True)
     print('LAB_JOINT_NAMES', env.robot.joint_names, flush=True)
     print('LAB_BODY_NAMES', env.robot.body_names, flush=True)
     print('LAB_BODY_MASSES', env.robot.data.body_mass.torch[0].tolist(), flush=True)
@@ -47,7 +61,16 @@ try:
         policy = UmiPolicy(checkpoint, device=args.device)
         torch.manual_seed(args.seed)
         env.reset()
-        pos, rot = policy.trajectories(args.trajectory).sample(args.num_envs, args.seed)
+        if args.target_sequences:
+            with np.load(args.target_sequences, allow_pickle=False) as saved:
+                pos = torch.from_numpy(saved['positions'].copy()).to(args.device)
+                rot = torch.from_numpy(saved['rotations'].copy()).to(args.device)
+            if pos.ndim != 3 or pos.shape[0] != args.num_envs or pos.shape[2] != 3 or rot.shape != (*pos.shape[:2], 3, 3):
+                raise ValueError('Saved targets must match num-envs with [N,T,3] positions and [N,T,3,3] rotations')
+            if not torch.isfinite(pos).all() or not torch.isfinite(rot).all():
+                raise ValueError('Saved target sequences contain nonfinite values')
+        else:
+            pos, rot = policy.trajectories(args.trajectory).sample(args.num_envs, args.seed)
         observer = policy.observer(pos, rot)
         controller = policy.controller(args.num_envs)
         noise_generator = None
@@ -59,6 +82,17 @@ try:
                 setattr(controller, gain, value * (torch.rand((args.num_envs, 18), device=args.device) * (high-low) + low))
             noise_generator = torch.Generator(device=args.device).manual_seed(args.seed)
         rows = []
+        dense_samples = [0]
+        if args.contact_summary:
+            body_peak = torch.zeros((args.num_envs, len(env.body_names)), device=args.device)
+            body_count = torch.zeros_like(body_peak, dtype=torch.long)
+            head_first = torch.full((args.num_envs,), float('inf'), device=args.device)
+            head_last = torch.full_like(head_first, -float('inf'))
+            head_ids = [env.body_names.index(name) for name in ('Head_upper', 'Head_lower')]
+            up_min = torch.ones(args.num_envs, device=args.device)
+            inverted_count = torch.zeros(args.num_envs, dtype=torch.long, device=args.device)
+            ground_sum = torch.zeros_like(inverted_count)
+            zero_ground_count = torch.zeros_like(inverted_count)
         def physics_step(substep, policy_step, raw_action):
             q, qd = env.joints()
             torque = controller.torque(q, qd, substep)
@@ -75,9 +109,24 @@ try:
                        'torque_before_limit': (controller.kp * (target - q) - controller.kd * qd)[i].tolist(),
                        'torque_applied': torque[i].tolist()}
             env.step_torque(torque)
-            if trace_stream is not None:
+            if args.contact_summary or trace_stream is not None:
                 readout = env.training_state()
                 state = env.state()
+            if args.contact_summary:
+                dense_samples[0] += 1
+                magnitude = readout['contact_forces'].norm(dim=-1)
+                body_peak.copy_(torch.maximum(body_peak, magnitude))
+                body_count.add_(magnitude > 1.)
+                head_contact = (magnitude[:, head_ids] > 1.).any(dim=1)
+                head_first.copy_(torch.minimum(head_first, torch.where(head_contact, env.time, float('inf'))))
+                head_last.copy_(torch.maximum(head_last, torch.where(head_contact, env.time, -float('inf'))))
+                up = -state.local_root_gravity[:, 2]
+                up_min.copy_(torch.minimum(up_min, up))
+                inverted_count.add_(up < 0)
+                supported = (env.feet_ground_force_z() > 1.).sum(dim=-1)
+                ground_sum.add_(supported)
+                zero_ground_count.add_(supported == 0)
+            if trace_stream is not None:
                 row.update({'time_after_s': float(env.time[i]), 'body_names': env.body_names,
                             'sensor_phase': 'ContactSensor net normal forces after existing simulation and scene update; body totals, not geom pairs or full friction force',
                             'contact_force_world_N': readout['contact_forces'][i].tolist(),
@@ -111,13 +160,18 @@ try:
                     raise FloatingPointError('Nonfinite physics joint state')
                 rows.append({'step': step, 'ee_error_m': error.tolist(), 'ee_error_rad': angle.tolist(),
                              'root_height_m': height.tolist(), 'up_dot': (-state.local_root_gravity[:, 2]).tolist()})
+                rows[-1]['episode_time_s'] = state.episode_time.tolist()
                 rows[-1]['supported_feet'] = (feet_force > 1).sum(-1).tolist()
                 ground_force = env.feet_ground_force_z()
                 rows[-1]['feet_ground_force_z'] = ground_force.tolist()
                 rows[-1]['ground_supported_feet'] = (ground_force > 1).sum(-1).tolist()
                 if args.domain_randomization:
                     env.apply_domain_randomization(step + 2)
-        report = {'engine': 'Isaac Lab PhysX', 'checkpoint': str(checkpoint),
+        report = {'engine': 'Isaac Lab PhysX', 'asset_identity': asset_identity,
+                  'checkpoint_training_asset': policy.training_asset,
+                  'checkpoint_training_runtime': policy.training_runtime,
+                  'checkpoint_training_selection': policy.training_selection,
+                  'target_sequences': (dict(path=str(args.target_sequences.resolve()), sha256=hashlib.sha256(args.target_sequences.read_bytes()).hexdigest(), protocol='Explicit saved targets; not a held-out partition evaluation') if args.target_sequences else None), 'checkpoint': str(checkpoint),
                   'joint_names': env.joint_names, 'num_envs': args.num_envs, 'steps': args.steps,
                   'physics_dt': env.dt, 'learning_performed_in_this_run': False, 'seed': args.seed,
                   'domain_randomization': args.domain_randomization, 'trajectory': str(args.trajectory),
@@ -125,6 +179,18 @@ try:
                   'support_definitions': {'supported_feet': 'foot net normal Fz > 1 N, including self-contact',
                       'ground_supported_feet': 'foot normal Fz against /World/Ground/geometry/mesh > 1 N'},
                   'rows': rows}
+        if args.contact_summary:
+            report['contact_summary'] = dict(
+                sample_period_s=env.dt, samples_per_case=dense_samples[0],
+                includes_zero_action_warmup=True, body_names=env.body_names,
+                body_normal_force_peak_N=body_peak.tolist(),
+                body_normal_force_samples_gt_1N=body_count.tolist(),
+                head_first_contact_s=[v if v != float('inf') else None for v in head_first.tolist()],
+                head_last_contact_s=[v if v != -float('inf') else None for v in head_last.tolist()],
+                minimum_root_up_dot=up_min.tolist(), inverted_samples=inverted_count.tolist(),
+                ground_supported_feet_mean=(ground_sum / dense_samples[0]).tolist(),
+                zero_ground_supported_samples=zero_ground_count.tolist(),
+                definition='Existing ContactSensor net normal world force magnitude >1N; head bodies Head_upper/Head_lower. Body totals can include self-contact, do not identify collider pairs or tangential force. Ground support uses separately filtered foot normal world Fz >1N. Every existing 5ms physics step, no extra simulation.')
         if trace_stream is not None:
             import warp as wp
             report['contact_trace'] = {'case': args.trace_case, 'path': str(args.contact_trace),
