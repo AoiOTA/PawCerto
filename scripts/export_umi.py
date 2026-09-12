@@ -14,13 +14,14 @@ def main():
     parser.add_argument('--checkpoint', type=Path, required=True,
                         help='Original checkpoint directory or training model_N.pt beside config.json')
     parser.add_argument('--joint-names', type=Path,
-                        default=ROOT / 'configs/umi_go2_arx5_joint_names.json',
-                        help='Measured original Go2 + ARX5 policy joint order')
+                        default=None,
+                        help='Optional exact order; defaults to the saved robot binding')
     parser.add_argument('--output', type=Path, required=True, help='New export directory')
     args = parser.parse_args()
     from pawcerto.methods.umi_on_legs import UmiPolicy
     policy = UmiPolicy(args.checkpoint)
-    result = policy.export(args.output, json.loads(args.joint_names.read_text()))
+    from pawcerto.methods.umi_on_legs.robot_binding import joint_order
+    result = policy.export(args.output, joint_order(policy.config,args.joint_names))
     print(json.dumps(result, indent=2))
 
 

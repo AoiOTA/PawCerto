@@ -6,13 +6,15 @@ FEET = ('FR_foot', 'FL_foot', 'RR_foot', 'RL_foot')
 FORCE_THRESHOLD_N = 1.0
 
 
-def geom_role(model, geom_id):
+def geom_role(model, geom_id, root_body="base"):
     body_id = int(model.geom_bodyid[geom_id])
     body_name = model.body(body_id).name
-    if model.body_rootid[body_id] != model.body('base').id:
+    if model.body_rootid[body_id] != model.body(root_body).id:
         return 'external'
     if body_name in FEET:
         return 'foot'
+    if root_body == 'base_link' and body_name in ('piper_gripper_link1', 'piper_gripper_link2'):
+        return 'gripper_finger'
     mesh_id = int(model.geom_dataid[geom_id])
     # Both finray fingers use the official collider mesh. link6 also contains
     # wrist/structural geoms; do not exempt that whole body as a gripper.
@@ -45,7 +47,7 @@ def contact_snapshot(sim):
                 foot_forces_z[foot_ids[body_id]] += sign * world_force[2]
                 if geom_ids[1-side] == ground_geom_id:
                     foot_ground_forces_z[foot_ids[body_id]] += sign * world_force[2]
-        roles = [geom_role(model, g) for g in geom_ids]
+        roles = [geom_role(model, g, sim.binding['root_body']) for g in geom_ids]
         norm = float(np.linalg.norm(world_force))
         records.append({'time_s': float(data.time), 'body_names': [model.body(b).name for b in body_ids],
                         'geom_ids': geom_ids, 'geom_roles': roles,

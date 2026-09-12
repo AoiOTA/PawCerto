@@ -63,12 +63,12 @@ def main():
     report = {'status': 'failed', 'processes': {}, 'scope': 'One sampled trajectory; actor and independent execution parity only, not fixed16 or holdout acceptance.'}
     try:
         from pawcerto.methods.umi_on_legs import UmiPolicy
-        from pawcerto.mujoco.runtime import JOINT_NAMES
+        from pawcerto.methods.umi_on_legs.robot_binding import joint_order
         original = UmiPolicy(args.checkpoint, device='cpu')
         exported = UmiPolicy(args.export, device='cpu')
         if original.config != exported.config:
             raise ValueError('Export configuration differs')
-        if json.loads((args.export / 'joint_names.json').read_text()) != list(JOINT_NAMES):
+        if json.loads((args.export / 'joint_names.json').read_text()) != joint_order(original.config):
             raise ValueError('Export joint order differs from runtime')
         if not isinstance(exported.actor, torch.jit.ScriptModule):
             raise ValueError('Export does not load TorchScript directly')

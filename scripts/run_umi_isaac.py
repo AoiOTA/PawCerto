@@ -13,8 +13,9 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--checkpoint', type=Path, default=ROOT / 'reference/checkpoints/tossing/ours')
 parser.add_argument('--compare-checkpoint', type=Path, action='append', default=[])
 parser.add_argument('--usd-path', type=Path, help='Explicit robot USD or USD-path text file; otherwise use the recorded asset, then the workspace default')
+parser.add_argument('--urdf-path', type=Path, help='Matching merged URDF; defaults to the recorded path, then the original robot URDF')
 parser.add_argument('--trajectory', type=Path, default=ROOT / 'reference/data/tossing.pkl')
-parser.add_argument('--joint-names', type=Path, required=True, help='JSON list from the original Gym asset query')
+parser.add_argument('--joint-names', type=Path, help='Optional exact order; defaults to saved robot binding')
 parser.add_argument('--target-sequences', type=Path, help='Saved NPZ positions/rotations for exact paired targets; bypasses trajectory sampling')
 parser.add_argument('--num-envs', type=int, default=4)
 parser.add_argument('--steps', type=int, default=1000)
@@ -32,20 +33,27 @@ try:
     import torch
     import numpy as np
     from pawcerto.methods.umi_on_legs import UmiPolicy
-    from pawcerto.isaac.runtime import Go2Arx5Isaac, DEFAULT_USD
+    from pawcerto.isaac.runtime import Go2Arx5Isaac, DEFAULT_USD, DEFAULT_URDF
+    from pawcerto.artifacts import file_identity
     policy = UmiPolicy(args.checkpoint, device=args.device)
+    from pawcerto.methods.umi_on_legs.robot_binding import robot_binding,joint_order
+    binding = robot_binding(policy.config)
     saved_asset = policy.training_asset
     if args.checkpoint.is_dir() and (args.checkpoint / 'actor.ts').is_file():
         # The export config determines execution; its training asset remains unknown.
         saved_asset = policy.config.get('pawcerto_asset')
-    usd_path = Path(args.usd_path or (saved_asset or {}).get('usd_path') or DEFAULT_USD)
+    usd_path = Path(args.usd_path or (saved_asset or {}).get('usd_path') or binding['usd_path'])
     if usd_path.suffix == '.txt':
         usd_path = Path(usd_path.read_text().strip())
     usd_path = usd_path.resolve()
-    asset_identity = dict(usd_path=str(usd_path), usd_sha256=hashlib.sha256(usd_path.read_bytes()).hexdigest())
+    usd_identity = file_identity(usd_path)
+    urdf_path = Path(args.urdf_path or (saved_asset or {}).get('urdf_path') or binding['urdf_path'])
+    urdf_identity = file_identity(urdf_path)
+    asset_identity = dict(usd_path=usd_identity['path'], usd_sha256=usd_identity['sha256'],
+                          urdf_path=urdf_identity['path'], urdf_sha256=urdf_identity['sha256'])
     torch.manual_seed(args.seed)
-    env = Go2Arx5Isaac(policy.config, json.loads(args.joint_names.read_text()), args.num_envs, args.device,
-                      usd_path=usd_path, training=args.domain_randomization, ground_contact_diagnostics=True)
+    env = Go2Arx5Isaac(policy.config, joint_order(policy.config,args.joint_names), args.num_envs, args.device,
+                      usd_path=usd_path, urdf_path=urdf_path, training=args.domain_randomization, ground_contact_diagnostics=True)
     print('LAB_JOINT_NAMES', env.robot.joint_names, flush=True)
     print('LAB_BODY_NAMES', env.robot.body_names, flush=True)
     print('LAB_BODY_MASSES', env.robot.data.body_mass.torch[0].tolist(), flush=True)
@@ -88,7 +96,7 @@ try:
             body_count = torch.zeros_like(body_peak, dtype=torch.long)
             head_first = torch.full((args.num_envs,), float('inf'), device=args.device)
             head_last = torch.full_like(head_first, -float('inf'))
-            head_ids = [env.body_names.index(name) for name in ('Head_upper', 'Head_lower')]
+            head_ids = [env.body_names.index(name) for name in binding['head_bodies']]
             up_min = torch.ones(args.num_envs, device=args.device)
             inverted_count = torch.zeros(args.num_envs, dtype=torch.long, device=args.device)
             ground_sum = torch.zeros_like(inverted_count)
@@ -185,12 +193,13 @@ try:
                 includes_zero_action_warmup=True, body_names=env.body_names,
                 body_normal_force_peak_N=body_peak.tolist(),
                 body_normal_force_samples_gt_1N=body_count.tolist(),
+                head_body_names=binding['head_bodies'],
                 head_first_contact_s=[v if v != float('inf') else None for v in head_first.tolist()],
                 head_last_contact_s=[v if v != -float('inf') else None for v in head_last.tolist()],
                 minimum_root_up_dot=up_min.tolist(), inverted_samples=inverted_count.tolist(),
                 ground_supported_feet_mean=(ground_sum / dense_samples[0]).tolist(),
                 zero_ground_supported_samples=zero_ground_count.tolist(),
-                definition='Existing ContactSensor net normal world force magnitude >1N; head bodies Head_upper/Head_lower. Body totals can include self-contact, do not identify collider pairs or tangential force. Ground support uses separately filtered foot normal world Fz >1N. Every existing 5ms physics step, no extra simulation.')
+                definition='Existing ContactSensor net normal world force magnitude >1N; head bodies listed in head_body_names (empty for AS2; no head contact channel). Body totals can include self-contact, do not identify collider pairs or tangential force. Ground support uses separately filtered foot normal world Fz >1N. Every existing 5ms physics step, no extra simulation.')
         if trace_stream is not None:
             import warp as wp
             report['contact_trace'] = {'case': args.trace_case, 'path': str(args.contact_trace),

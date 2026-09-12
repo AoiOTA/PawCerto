@@ -12,9 +12,12 @@ from isaaclab.utils.math import matrix_from_quat, quat_from_euler_xyz, quat_mul
 from isaaclab_physx.physics import PhysxCfg
 from pawcerto.methods.umi_on_legs import RobotState
 from pawcerto.methods.umi_on_legs.training.semantics import runtime_contract
+from pawcerto.robots.urdf import read_joint_limits
+from pawcerto.methods.umi_on_legs.robot_binding import robot_binding, joint_order
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_USD = ROOT / 'reference/isaac/go2_arx5/usd_path.txt'
+DEFAULT_URDF = ROOT / 'reference/isaac/go2_arx5/go2_arx5_merged.urdf'
 
 
 def euler_xyz_quat(angles):
@@ -27,23 +30,28 @@ def euler_xyz_quat(angles):
 
 
 class Go2Arx5Isaac:
-    def __init__(self, config, joint_names, num_envs=1, device='cuda:0', usd_path=DEFAULT_USD, training=False,
-                 ground_contact_diagnostics=False, force_signal="normal-contact"):
+    def __init__(self, config, joint_names, num_envs=1, device='cuda:0', usd_path=None, training=False,
+                 ground_contact_diagnostics=False, force_signal="normal-contact", urdf_path=None):
         if force_signal not in ("normal-contact", "reconstructed-solver"):
             raise ValueError(f"Unknown force signal: {force_signal}")
         self.force_signal = force_signal
         self.joint_velocity_limit_override_rad_s = config.get('joint_velocity_limit_override_rad_s')
         runtime_contract(force_signal, self.joint_velocity_limit_override_rad_s)
+        self.binding = robot_binding(config)
+        if list(joint_names) != joint_order(config):
+            raise ValueError('Runtime joint order differs from UMI robot binding')
         self.config = config
         self.dt = config['env']['cfg']['sim']['dt']
         self.device = device
         self.joint_names = list(joint_names)
         self.training = training
         self.ground_contact_diagnostics = ground_contact_diagnostics
-        usd_path = Path(usd_path)
+        usd_path = Path(usd_path or config.get('pawcerto_asset', {}).get('usd_path') or self.binding['usd_path'])
         if usd_path.suffix == '.txt':
             usd_path = Path(usd_path.read_text().strip())
         initial = config['env']['cfg']['init_state']
+        # This supported Isaac Lab 3 runtime, like the UMI config, uses xyzw.
+        initial_rotation = tuple(initial['rot'])
         offset = config['env']['controller']['offset']['data']
         ground_width = 4 * math.ceil(math.sqrt(num_envs)) + 20
         collision_props = sim_utils.CollisionPropertiesCfg(
@@ -51,13 +59,13 @@ class Go2Arx5Isaac:
             rest_offset=config['env']['cfg']['sim']['physx']['rest_offset'])
         if config['env']['cfg']['domain_rand'].get('randomize_dof_velocity', False):
             raise ValueError('DOF velocity randomization is not implemented; preserve the original URDF limits')
-        asset = ET.parse(ROOT / 'reference/isaac/go2_arx5/go2_arx5_merged.urdf')
+        self.urdf_path = Path(urdf_path or config.get('pawcerto_asset', {}).get('urdf_path') or self.binding['urdf_path']).resolve()
+        asset = ET.parse(self.urdf_path)
         joints = asset.findall('joint')
-        joints_by_name = {joint.get('name'): joint for joint in joints}
+        source_limits = read_joint_limits(self.urdf_path, joint_names)
         velocity_limits = {}
         for name in joint_names:
-            limit = joints_by_name[name].find('limit')
-            velocity = float(limit.get('velocity'))
+            velocity = source_limits[name]['velocity']
             if not math.isfinite(velocity) or velocity <= 0:
                 raise ValueError(f'Invalid original URDF velocity limit for {name}: {velocity}')
             velocity_limits[name] = velocity
@@ -79,7 +87,7 @@ class Go2Arx5Isaac:
                     articulation_props=sim_utils.ArticulationRootPropertiesCfg(enabled_self_collisions=True,
                         solver_position_iteration_count=4, solver_velocity_iteration_count=0)),
                 init_state=ArticulationCfg.InitialStateCfg(pos=tuple(initial['pos']),
-                    rot=tuple(initial['rot']), joint_pos=dict(zip(joint_names, offset))),
+                    rot=initial_rotation, joint_pos=dict(zip(joint_names, offset))),
                 actuators={'effort': IdealPDActuatorCfg(joint_names_expr=['.*'], stiffness=0., damping=0.,
                     effort_limit=1e9, effort_limit_sim=1e9, velocity_limit_sim=velocity_limits, armature=0.,
                     friction=0., dynamic_friction=0., viscous_friction=0.)})
@@ -90,15 +98,19 @@ class Go2Arx5Isaac:
             physics=PhysxCfg(enable_external_forces_every_iteration=False)))
         scene_cfg = SceneCfg(num_envs=num_envs, env_spacing=4.)
         from isaaclab.sensors import ContactSensorCfg
-        paths = {'base': '{ENV_REGEX_NS}/Robot/Geometry/base'}
+        root_body = self.binding['root_body']
+        paths = {root_body: '{ENV_REGEX_NS}/Robot/Geometry/' + root_body}
         pending = list(joints)
         while pending:
+            remaining = len(pending)
             for joint in pending[:]:
                 parent = joint.find('parent').get('link')
                 if parent in paths:
                     child = joint.find('child').get('link')
                     paths[child] = paths[parent] + '/' + child
                     pending.remove(joint)
+            if len(pending) == remaining:
+                raise ValueError(f'URDF joints are not reachable from UMI base link: {[joint.get("name") for joint in pending]}')
         self.contact_names = [link.get('name') for link in asset.findall('link') if link.find('collision') is not None]
         for name in self.contact_names:
             filters = ['/World/Ground/geometry/mesh'] if ground_contact_diagnostics and name.endswith('_foot') else []
@@ -132,7 +144,7 @@ class Go2Arx5Isaac:
         self.robot = self.scene['robot']
         self.body_names = self.robot.body_names
         self.joint_ids = [self.robot.joint_names.index(name) for name in joint_names]
-        self.link6_id = self.robot.body_names.index('link6')
+        self.tcp_body_id = self.robot.body_names.index(self.binding['tcp_body'])
         self.num_envs = num_envs
         self.time = torch.zeros(num_envs, device=device)
         if training:
@@ -231,7 +243,7 @@ class Go2Arx5Isaac:
             gym_bodies.append(name)
             for child in sorted(children.get(name, [])):
                 visit(child)
-        visit('base')
+        visit(self.binding['root_body'])
         lab_shapes = [(name, i) for name in self.body_names for i in range(len(links[name].findall('collision')))]
         gym_shapes = [(name, i) for name in gym_bodies for i in range(len(links[name].findall('collision')))]
         if len(lab_shapes) != self.robot.root_view.max_shapes:
@@ -298,13 +310,14 @@ class Go2Arx5Isaac:
     def state(self):
         data = self.robot.data
         root_rotation = matrix_from_quat(data.root_link_quat_w.torch)
-        rotation = matrix_from_quat(data.body_link_quat_w.torch[:, self.link6_id])
-        position = (data.body_link_pos_w.torch[:, self.link6_id] - self.scene.env_origins)
-        # Original ee_gripper fixed frame: xyz=(.22,0,0), rpy=(-pi/2,0,-pi/2).
-        ee_rotation = torch.tensor([[0., 0., 1.], [-1., 0., 0.], [0., -1., 0.]], device=self.device)
+        rotation = matrix_from_quat(data.body_link_quat_w.torch[:, self.tcp_body_id])
+        position = (data.body_link_pos_w.torch[:, self.tcp_body_id] - self.scene.env_origins)
+        # The binding carries the robot-specific fixed transform to the policy TCP.
+        ee_rotation = torch.tensor(self.binding['tcp_rotation'], device=self.device)
+        ee_offset = torch.tensor(self.binding['tcp_xyz'], device=self.device)
         ee_pose = torch.eye(4, device=self.device).repeat(len(position), 1, 1)
         ee_pose[:, :3, :3] = rotation @ ee_rotation
-        ee_pose[:, :3, 3] = position + rotation[:, :, 0] * .22
+        ee_pose[:, :3, 3] = position + (rotation @ ee_offset)
         angular = data.root_link_ang_vel_w.torch
         q, qd = self.joints()
         return RobotState((root_rotation.transpose(-1, -2) @ angular[..., None]).squeeze(-1),

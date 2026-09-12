@@ -1,6 +1,5 @@
 """Train original UMI PPO on the original robot in Isaac Lab PhysX."""
 import argparse
-import hashlib
 import json
 from pathlib import Path
 import sys
@@ -16,7 +15,9 @@ def main():
     parser.add_argument('--trajectory',type=Path,default=ROOT/'reference/data/tossing.pkl')
     parser.add_argument('--split-manifest', type=Path, help='Grouped manifest; training always uses train partition')
     parser.add_argument('--usd-path', type=Path, help='Explicit robot USD or USD-path text file; otherwise use the recorded asset, then the workspace default')
-    parser.add_argument('--joint-names',type=Path,required=True,help='Official Gym DOF names JSON, queried from original asset')
+    parser.add_argument('--urdf-path', type=Path, help='Matching merged URDF for joint limits and body topology; defaults to the recorded path, then the original robot URDF')
+    parser.add_argument('--joint-names',type=Path,help='Optional exact joint-order JSON; defaults to the recorded robot binding')
+    parser.add_argument('--robot', choices=('go2_arx5','as2_piper'), help='Adapt a fresh configuration; saved AS2 configurations retain their binding')
     parser.add_argument('--num-envs',type=int,default=4096)
     parser.add_argument('--iterations',type=int,default=None,help='Default: original config max_iterations')
     parser.add_argument('--resume',type=Path)
@@ -38,21 +39,34 @@ def main():
         import random
         import numpy as np
         import torch
-        from pawcerto.isaac.runtime import DEFAULT_USD, Go2Arx5Isaac
+        from pawcerto.isaac.runtime import DEFAULT_USD, DEFAULT_URDF, Go2Arx5Isaac
+        from pawcerto.artifacts import file_identity
         from pawcerto.methods.umi_on_legs.training import UmiTrainer, load_config
         from pawcerto.methods.umi_on_legs.training.isaac_env import UmiIsaacTrainingEnv
         from pawcerto.methods.umi_on_legs.training.semantics import runtime_contract,require_resume_contract
         random.seed(args.seed); np.random.seed(args.seed); torch.manual_seed(args.seed)
+        from pawcerto.methods.umi_on_legs.robot_binding import as2_config,robot_binding,joint_order,require_same_robot
         config=load_config(args.config)
+        if args.robot == 'as2_piper':
+            config=as2_config(config)
+        binding=robot_binding(config)
+        if args.robot is not None and args.robot != binding['name']:
+            raise ValueError('--robot disagrees with the saved configuration')
         source_path=args.resume or args.weights
         source_checkpoint=torch.load(source_path,map_location='cpu',weights_only=False) if source_path else None
+        if source_checkpoint is not None:
+            require_same_robot(config,source_checkpoint.get('config',{}))
         source_asset=(source_checkpoint.get('config',{}).get('pawcerto_asset') if source_checkpoint is not None else config.get('pawcerto_asset'))
-        usd_path=Path(args.usd_path or (source_asset or {}).get('usd_path') or DEFAULT_USD)
+        usd_path=Path(args.usd_path or (source_asset or {}).get('usd_path') or binding['usd_path'])
         if usd_path.suffix == '.txt':
             usd_path=Path(usd_path.read_text().strip())
         usd_path=usd_path.resolve()
-        config['pawcerto_asset']=dict(usd_path=str(usd_path),
-                                    usd_sha256=hashlib.sha256(usd_path.read_bytes()).hexdigest())
+        asset_identity=file_identity(usd_path)
+        urdf_path=Path(args.urdf_path or (source_asset or {}).get('urdf_path') or binding['urdf_path'])
+        urdf_identity=file_identity(urdf_path)
+        config['pawcerto_asset']=dict(usd_path=asset_identity['path'],
+                                    usd_sha256=asset_identity['sha256'],
+                                    urdf_path=urdf_identity['path'],urdf_sha256=urdf_identity['sha256'])
         if config['env']['tasks']['reaching']['sequence_sampler'].get('trajectory_selection') and not args.split_manifest:
             raise ValueError('Saved split config requires --split-manifest; refusing silent full-pool training')
         from pawcerto.methods.umi_on_legs.data_split import configure_selection
@@ -75,8 +89,8 @@ def main():
             checkpoint=str(source_path.resolve()) if source_path else None,
             source_pawcerto_runtime=source_runtime,
             source_pawcerto_asset=source_asset if source_path else None)
-        runtime=Go2Arx5Isaac(config,json.loads(args.joint_names.read_text()),args.num_envs,args.device,
-                           usd_path=usd_path,training=True,force_signal=args.force_signal)
+        runtime=Go2Arx5Isaac(config,joint_order(config,args.joint_names),args.num_envs,args.device,
+                           usd_path=usd_path,urdf_path=urdf_path,training=True,force_signal=args.force_signal)
         env=UmiIsaacTrainingEnv(runtime,config,args.trajectory,args.seed)
         trainer=UmiTrainer(env,config,args.device)
         if args.resume:

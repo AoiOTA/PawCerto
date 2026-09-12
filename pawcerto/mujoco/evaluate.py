@@ -127,7 +127,9 @@ def evaluate(checkpoint_dir, trajectory_path, seconds=17., seed=0, *, policy=Non
                 'sample_location': 'Policy endpoint after runtime mj_forward, once per20ms; not every5ms physics substep',
                 'force_threshold_N': FORCE_THRESHOLD_N,
                 'force_threshold_measure': 'Per-contact world force Euclidean norm; strictly greater than threshold',
-                'exclusions': 'Four named foot bodies and link6 collider-mesh finger geoms only; wrist/structural link6 geoms remain counted',
+                'exclusions': ('Four named foot bodies and stock piper_gripper_link1/link2 finger bodies'
+                               if sim.binding['name'] == 'as2_piper' else
+                               'Four named foot bodies and link6 collider-mesh finger geoms only; wrist/structural link6 geoms remain counted'),
                 'sampled_occupancy_s_is_not_continuous_duration': True},
             'nonfoot_contact_samples_gt_1N': any_contact_samples,
             'nonfoot_external_contact_samples_gt_1N': contact_sample_counts['external'],

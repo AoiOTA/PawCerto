@@ -4,6 +4,7 @@ from pathlib import Path
 import mujoco
 import numpy as np
 from .asset import DEFAULT_MODEL, ROOT
+from pawcerto.methods.umi_on_legs.robot_binding import robot_binding
 
 JOINT_NAMES = tuple(f'{leg}_{part}_joint' for leg in ('FL', 'FR', 'RL', 'RR')
                     for part in ('hip', 'thigh', 'calf')) + tuple(f'joint{i}' for i in range(1, 7))
@@ -22,13 +23,16 @@ class SimulationInstability(FloatingPointError):
 
 
 class Go2Arx5Mujoco:
-    def __init__(self, config_path=ROOT / 'reference/checkpoints/tossing/ours/config.json', model_path=DEFAULT_MODEL):
-        self.cfg = json.loads(Path(config_path).read_text())['env']
+    def __init__(self, config_path=ROOT / 'reference/checkpoints/tossing/ours/config.json', model_path=None):
+        config = json.loads(Path(config_path).read_text())
+        self.binding = robot_binding(config)
+        self.cfg = config['env']
+        model_path = model_path or self.binding['mujoco_path']
         self.model = mujoco.MjModel.from_xml_path(str(model_path))
         self.model.opt.timestep = self.cfg['cfg']['sim']['dt']
         self.data = mujoco.MjData(self.model)
-        self.joint_names = JOINT_NAMES
-        joints = [self.model.joint(name) for name in JOINT_NAMES]
+        self.joint_names = tuple(self.binding['joint_names'])
+        joints = [self.model.joint(name) for name in self.joint_names]
         self.qadr = np.array([int(j.qposadr[0]) for j in joints])
         self.vadr = np.array([int(j.dofadr[0]) for j in joints])
         c = self.cfg['controller']
@@ -54,7 +58,7 @@ class Go2Arx5Mujoco:
     def state(self):
         result = {'joint_pos': self.data.qpos[self.qadr].copy(),
                   'joint_vel': self.data.qvel[self.vadr].copy(), 'time': float(self.data.time)}
-        for prefix, name in [('root', 'base'), ('ee', 'end_effector')]:
+        for prefix, name in [('root', self.binding['root_body']), ('ee', 'end_effector' if self.binding['name'] == 'go2_arx5' else self.binding['tcp_body'])]:
             body = self.data.body(name)
             velocity = np.zeros(6)
             mujoco.mj_objectVelocity(self.model, self.data, mujoco.mjtObj.mjOBJ_BODY,
@@ -66,6 +70,10 @@ class Go2Arx5Mujoco:
             # mj_objectVelocity BODY returns velocity at the inertial center.
             # Our state pose is the link origin, including massless EE links.
             result[prefix + '_lin_vel_world'] = velocity[3:] + np.cross(velocity[:3], body.xpos - body.xipos)
+        if self.binding['name'] == 'as2_piper':
+            displacement = result['ee_rotmat'] @ np.asarray(self.binding['tcp_xyz'])
+            result['ee_pos'] += displacement
+            result['ee_lin_vel_world'] += np.cross(result['ee_ang_vel_world'], displacement)
         result['root_ang_vel_body'] = result['root_rotmat'].T @ result['root_ang_vel_world']
         result['gravity_body'] = result['root_rotmat'].T @ np.array([0., 0., -1.])
         return result

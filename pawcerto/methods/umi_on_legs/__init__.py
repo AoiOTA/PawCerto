@@ -15,6 +15,7 @@ from pathlib import Path
 import numpy as np
 import torch
 from torch import nn
+from pawcerto.artifacts import file_identity
 
 # Joint arrays must be supplied in the original simulator asset DOF order.
 # The live importer owns this mapping; config comments are not authoritative.
@@ -198,7 +199,9 @@ class UmiPolicy:
         self.training_selection = None
         self.training_asset = None
         self.training_runtime = None
+        self.source_config = file_identity(directory / 'config.json')
         if source.is_dir() and (directory / 'actor.ts').exists():
+            self.source_weights = file_identity(directory / 'actor.ts')
             self.actor = torch.jit.load(str(directory / 'actor.ts'), map_location=device).eval()
         else:
             ac = self.config['runner']['alg']['actor_critic']
@@ -207,7 +210,11 @@ class UmiPolicy:
                 cls = {'torch.nn.Linear': nn.Linear, 'torch.nn.ELU': nn.ELU}[spec['_target_']]
                 layers.append(cls(**{k: v for k, v in spec.items() if not k.startswith('_')}))
             self.actor = nn.Sequential(*layers).eval()
-            checkpoint = torch.load(source if source.is_file() else directory / 'model.pt', map_location='cpu', weights_only=False)
+            weights_path = source if source.is_file() else directory / 'model.pt'
+            self.source_weights = file_identity(weights_path)
+            checkpoint = torch.load(weights_path, map_location='cpu', weights_only=False)
+            from .robot_binding import require_same_robot
+            require_same_robot(self.config, checkpoint.get('config', {}))
             from .data_split import checkpoint_training_selection
             self.training_selection = checkpoint_training_selection(checkpoint)
             self.training_asset = checkpoint.get('config', {}).get('pawcerto_asset')
@@ -228,6 +235,9 @@ class UmiPolicy:
             raise ValueError('Export uses a CPU UmiPolicy; load the source with device="cpu"')
         dim = self.config['runner']['alg']['actor_critic']['num_actor_obs']
         actions = self.config['runner']['alg']['actor_critic']['num_actions']
+        from .robot_binding import joint_order
+        if list(joint_names) != joint_order(self.config):
+            raise ValueError('Export joint order differs from the saved UMI robot binding')
         if len(joint_names) != actions or len(set(joint_names)) != actions:
             raise ValueError(f'Expected {actions} unique asset joint names in policy order')
         blob = io.BytesIO()
@@ -243,6 +253,18 @@ class UmiPolicy:
         (output_dir / 'actor.ts').write_bytes(blob.getvalue())
         (output_dir / 'config.json').write_text(json.dumps(self.config, indent=2) + '\n')
         (output_dir / 'joint_names.json').write_text(json.dumps(joint_names, indent=2) + '\n')
+        # Preserve provenance for inspection without promoting an actor-only
+        # package to independently verified training-partition evidence.
+        provenance = {
+            'format': 'pawcerto.umi.export.v1',
+            'source_weights': self.source_weights,
+            'source_config': self.source_config,
+            'actor': file_identity(output_dir / 'actor.ts'),
+            'checkpoint_training_selection': self.training_selection,
+            'checkpoint_training_asset': self.training_asset,
+            'checkpoint_training_runtime': self.training_runtime,
+        }
+        (output_dir / 'export.json').write_text(json.dumps(provenance, indent=2) + '\n')
         return {'output': str(output_dir), 'max_actor_error': (actual - expected).abs().max().item(),
                 'observation_dim': dim, 'action_dim': actions}
 

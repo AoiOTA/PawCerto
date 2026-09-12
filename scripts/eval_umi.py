@@ -1,6 +1,5 @@
 """Evaluate a full UMI checkpoint with saved inputs plus author eval semantics."""
 import argparse
-import hashlib
 import json
 from pathlib import Path
 import sys
@@ -15,10 +14,11 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--checkpoint',type=Path,required=True,help='Full model_N.pt or official directory containing model.pt and config.json')
     parser.add_argument('--usd-path',type=Path,help='Explicit robot USD or USD-path text file; otherwise use the recorded asset, then the workspace default')
+    parser.add_argument('--urdf-path',type=Path,help='Matching merged URDF; defaults to the recorded path, then the original robot URDF')
     parser.add_argument('--trajectory',type=Path,default=ROOT/'reference/data/tossing.pkl')
     parser.add_argument('--split-manifest',type=Path)
     parser.add_argument('--partition',choices=('validation','test'),default='validation')
-    parser.add_argument('--joint-names',type=Path,default=ROOT/'configs/umi_go2_arx5_joint_names.json')
+    parser.add_argument('--joint-names',type=Path,help='Optional exact order; defaults to saved robot binding')
     parser.add_argument('--seed',type=int,default=2026,help='Preselected evaluation seed is 2026')
     parser.add_argument('--output',type=Path,required=True)
     parser.add_argument('--force-signal',choices=('reconstructed-solver','normal-contact'),
@@ -39,7 +39,7 @@ def main():
         import random
         import numpy as np
         import torch
-        from pawcerto.isaac.runtime import Go2Arx5Isaac,DEFAULT_USD
+        from pawcerto.isaac.runtime import Go2Arx5Isaac,DEFAULT_USD,DEFAULT_URDF
         from pawcerto.methods.umi_on_legs.training import build_algorithm,load_config
         from pawcerto.methods.umi_on_legs.training.isaac_env import UmiIsaacTrainingEnv
         from pawcerto.methods.umi_on_legs.training.evaluation import author_eval_config,evaluate_completed_episodes
@@ -56,16 +56,24 @@ def main():
             args.force_signal, config.get('joint_velocity_limit_override_rad_s'))
         config['evaluation_weights']=dict(checkpoint=str(checkpoint_path.resolve()),
                                          training_pawcerto_runtime=checkpoint_runtime)
+        from pawcerto.methods.umi_on_legs.robot_binding import robot_binding,joint_order,require_same_robot
+        require_same_robot(config,checkpoint.get('config',{}))
+        binding=robot_binding(config)
         checkpoint_asset=checkpoint.get('config',{}).get('pawcerto_asset')
-        usd_path=Path(args.usd_path or (checkpoint_asset or {}).get('usd_path') or DEFAULT_USD)
+        usd_path=Path(args.usd_path or (checkpoint_asset or {}).get('usd_path') or binding['usd_path'])
         if usd_path.suffix == '.txt':
             usd_path=Path(usd_path.read_text().strip())
         usd_path=usd_path.resolve()
-        config['pawcerto_asset']=dict(usd_path=str(usd_path),usd_sha256=hashlib.sha256(usd_path.read_bytes()).hexdigest())
+        from pawcerto.artifacts import file_identity
+        asset_identity=file_identity(usd_path)
+        urdf_path=Path(args.urdf_path or (checkpoint_asset or {}).get('urdf_path') or binding['urdf_path'])
+        urdf_identity=file_identity(urdf_path)
+        config['pawcerto_asset']=dict(usd_path=asset_identity['path'],usd_sha256=asset_identity['sha256'],
+                                    urdf_path=urdf_identity['path'],urdf_sha256=urdf_identity['sha256'])
         config['env']['headless']=not launcher.has_window
         args.output.mkdir(parents=True,exist_ok=True)
         (args.output/'resolved_config.json').write_text(json.dumps(config,indent=2))
-        runtime=Go2Arx5Isaac(config,json.loads(args.joint_names.read_text()),250,args.device,usd_path=usd_path,training=True,
+        runtime=Go2Arx5Isaac(config,joint_order(config,args.joint_names),250,args.device,usd_path=usd_path,urdf_path=urdf_path,training=True,
                            ground_contact_diagnostics=args.ground_contact_diagnostics,
                            force_signal=args.force_signal)
         env=UmiIsaacTrainingEnv(runtime,config,args.trajectory,args.seed)

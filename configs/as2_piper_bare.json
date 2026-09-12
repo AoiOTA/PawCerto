@@ -1,0 +1,87 @@
+{
+  "description": "Nominal vendor URDF composition for research simulation; physical assembly and actuator calibration unverified",
+  "as2_urdf": "unitree_as2/robots/as2_description/urdf/as2.urdf",
+  "piper_urdf": "agilex_piper_h/piper_h/urdf/piper_h_description.urdf",
+  "mount": {
+    "parent": "base_link",
+    "child": "piper_base_link",
+    "xyz": [
+      0,
+      0,
+      0.12
+    ],
+    "rpy": [
+      0,
+      0,
+      0
+    ],
+    "assumption": "Nominal rigid massless mount; not measured hardware, no mounting plate/cables/camera/gripper mass"
+  },
+  "tcp": {
+    "body": "piper_link6",
+    "xyz": [
+      0,
+      0,
+      0
+    ],
+    "rpy": [
+      0,
+      0,
+      0
+    ],
+    "assumption": "Bare vendor link6 flange frame; no gripper or calibrated tool offset"
+  },
+  "controlled_joint_order": [
+    "FL_hip_joint",
+    "FL_thigh_joint",
+    "FL_calf_joint",
+    "FR_hip_joint",
+    "FR_thigh_joint",
+    "FR_calf_joint",
+    "RL_hip_joint",
+    "RL_thigh_joint",
+    "RL_calf_joint",
+    "RR_hip_joint",
+    "RR_thigh_joint",
+    "RR_calf_joint",
+    "piper_joint1",
+    "piper_joint2",
+    "piper_joint3",
+    "piper_joint4",
+    "piper_joint5",
+    "piper_joint6"
+  ],
+  "default_joint_positions": [
+    0,
+    0.8,
+    -1.5,
+    0,
+    0.8,
+    -1.5,
+    0,
+    0.8,
+    -1.5,
+    0,
+    0.8,
+    -1.5,
+    0,
+    1,
+    -1.2,
+    0,
+    0.2,
+    0
+  ],
+  "default_base_xyz": [
+    0,
+    0,
+    0.55
+  ],
+  "default_base_quat_wxyz": [
+    1,
+    0,
+    0,
+    0
+  ],
+  "timestep": 0.005,
+  "actuation": "Direct joint torque, unit gear, source URDF effort bounds. No identified motor dynamics, gains, friction or added armature; source velocity limits recorded but not enforced by MuJoCo motors. Not hardware limits certification."
+}

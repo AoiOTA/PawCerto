@@ -74,7 +74,14 @@ class UmiPolicyTest(unittest.TestCase):
                 with torch.inference_mode():
                     torch.testing.assert_close(loaded.actor(observation), original.actor(observation), rtol=0, atol=0)
                 self.assertEqual(sorted(p.name for p in (directory / 'export').iterdir()),
-                                 ['actor.ts', 'config.json', 'joint_names.json'])
+                                 ['actor.ts', 'config.json', 'export.json', 'joint_names.json'])
+                import hashlib
+                provenance = json.loads((directory / 'export/export.json').read_text())
+                self.assertEqual(provenance['source_weights']['sha256'],
+                                 hashlib.sha256((directory / 'model_3.pt').read_bytes()).hexdigest())
+                self.assertEqual(provenance['actor']['sha256'],
+                                 hashlib.sha256((directory / 'export/actor.ts').read_bytes()).hexdigest())
+                self.assertIsNone(loaded.training_selection)
 
     def test_real_trajectory_matches_upstream(self):
         ns = upstream_nodes(UPSTREAM / 'env/isaacgym/pose_sequence.py', class_names=('SequenceSampler', 'PicklePoseSequenceLoader'))
