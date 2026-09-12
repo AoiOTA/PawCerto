@@ -10,7 +10,7 @@ requires-python = ">=3.10"
 dependencies = ["numpy", "torch", "scipy"]
 
 [project.optional-dependencies]
-mujoco = ["mujoco>=3.8"]
+mujoco = ["mujoco>=3.8", "trimesh", "pycollada"]
 analysis = ["matplotlib>=3.9"]
 
 [tool.setuptools.packages.find]
@@ -20,3 +20,4 @@ namespaces = true
 [tool.setuptools.package-data]
 "pawcerto.methods.umi_on_legs" = ["LICENSE"]
 "pawcerto.methods.roboduet" = ["LICENSE", "LICENSES/*/LICENSE"]
+"pawcerto.methods.unifp" = ["LICENSE", "LICENSES/*/LICENSE"]
