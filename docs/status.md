@@ -64,6 +64,17 @@ weights. Neither bounded updates nor a recovered probe establishes learned
 force control, exact cross-engine physics or hardware acceptance.
 
 
+ReLIC now has an [optional external-export CPU consumer](relic-external-export.md).
+The original TorchScript and ONNX exports ran on three synthetic finite
+84-value inputs, returning 12 raw leg actor values; all comparisons passed
+rtol=1e-5/atol=1e-6, with maximum absolute difference 3.09944e-6. Six authored
+adapter ABI tests passed. Actual runtime joint order and the exports' training
+stage/seed/update count remain unknown. The downstream arm-seven and selected-
+leg-three target overwrites are not implemented by this consumer. No simulator,
+training or complete ReLIC control result is established. Noncommercial
+upstream code/assets/models/license stay in ignored external artifacts;
+the default package contains only the authored adapter.
+
 The [approved continuation plan](project-plan.md) starts from the completed
 three-seed UMI baseline. On 2026-09-12 the user selected seed-matched tracking
 preservation and correction of uncontrolled behavior, with controllable calf

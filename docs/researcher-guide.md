@@ -18,8 +18,10 @@ Robot support means a measured method/robot/runtime combination, not just a load
 | B1 + Z1 | Learning Force Control | Official Lab 20+1 updates, actual 19-output/native-position-drive semantics and zero-update probe recovery; 500×16 finite JIT transitions and all-input CPU parity, four orientation resets and 0.821928 m position-mode EE error; author weights not obtained and learned force control unproved |
 
 Go2 + Airbot Play (MLM) remains conditional on missing author training material.
-Spot + arm (ReLIC) is an optional research integration subject to its original
-noncommercial license. No all-method/all-robot compatibility or physical
+Spot + arm (ReLIC) has an [optional external-export CPU consumer](relic-external-export.md),
+with upstream files kept outside the package under their noncommercial license.
+It accepts already packed 84-value observations and returns 12 raw actor values;
+actual runtime joint order and the full downstream controller are unverified. No all-method/all-robot compatibility or physical
 hardware execution is implied. See the [execution plan](project-plan.md) and
 [AS2/Piper H asset assumptions](as2-piper-assets.md).
 
@@ -59,6 +61,12 @@ force control. The completed fixed evaluation has four orientation resets and
 poor tracking despite all-input export parity; its initial zero-consumption
 reset failure remains preserved. The bounded assignment is closed. Preserve the documented source
 measurement/force-body distinction and derived asset/license provenance.
+
+For ReLIC, follow [external PT/ONNX consumption](relic-external-export.md).
+Supply trusted local exports and packed observations; the adapter does not fetch
+models, build robot observations or run a simulator. ONNX requires an already
+available optional ONNX Runtime. The measured comparison uses three synthetic
+inputs, not physical trajectories or learned-controller acceptance.
 
 ## 1. Run the existing path
 
