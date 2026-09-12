@@ -1,4 +1,21 @@
-# PawCerto and KMA: continuation from the completed UMI baseline
+# PawCerto: an open reinforcement-learning framework for quadruped manipulation
+
+The user-confirmed final goal is an open-source whole-body-control (WBC)
+reinforcement-learning framework for quadruped robots with manipulators,
+usable by the broader research community. UMI-on-Legs is the first complete
+method integration and validation route, not the limit of the project.
+Researchers should be able to obtain public inputs, install supported official
+dependencies, reproduce measured baselines, and adapt methods to their robots
+and tasks. Training, evaluation and policy deployment must have usable entry
+points, documented assumptions and honest behavior evidence.
+
+Build shared robot, task-input, simulation, evaluation and deployment components
+when concrete method integrations need them. Preserve each method's observation,
+reward and learning semantics. The multi-method route and the rule to extract
+shared code after a second working method remain below; this goal does not
+authorize premature universal abstractions or change the current experiment
+budgets and stop boundaries. KMA remains separate development tooling, not a
+dependency for researchers using PawCerto.
 
 Approved on 2026-09-12. This is the current project direction, not a claim that
 the remaining work has already passed. The initial UMI implementation, three
