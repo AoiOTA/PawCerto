@@ -45,6 +45,12 @@ python scripts/build_as2_ee_tasks.py \
 
 原接触谓词触发121次环境重置，0 timeout/边界终止；body合计normal力不能将其称为121次摔倒。143个episode片段中71个在2秒运动前结束、56个经过hold→运动；实际访问97/176个任务×资产组合，52个组合目标离开起始hold，0个片段到15秒末hold，最大episode时钟11.7402秒。末22片段被消费者预算截断，没有完整timeout episode。零动作生命周期端点EE均值0.396253 m/0.714146 rad，平均地面支撑脚3.80761，零支撑1.38874%，1片段曾倒置；reset相对root位移均值0.128951 m、峰0.756611 m。这些不是完整17秒均值或学会底盘移动的证据。完整结果在`outputs/as2-general-ee-consumption-20260913/result.md`及所引原始产物。
 
+全部18,722个重置前状态随后完成CPU质心重建：使用实际读回的各body质量/局部COM、冻结URDF及保存的root/q，所得TCP与独立保存值最大位置差3.423 µm、旋转矩阵元素差1.64e-6；22源URDF身份均通过。该结果支持坐标/关节映射一致，但不是每个link位姿或PhysX整机world COM的直接读回。环境局部world与加回环境origin的scene-world分别保存，载荷已合入gripper惯性，未重复加质量。
+
+指定20 kg本体＋2 kg点载荷资产的实际总质量27.17356 kg，实际root-frame整机COM的X/Y/Z范围分别为[23.78,54.69]/[-10.05,18.58]/[56.06,114.34] mm，TCP相对arm mount的水平伸展0.234–0.473 m。该资产未访问`extension_mix`或`translate_backward`，只有`height_front`进入2秒后的运动阶段；最大伸展出现在重置后0.02秒，不能视为指令驱动的伸展覆盖。完整未执行参考的水平伸展最大0.698 m、满载COM root X最大97.07 mm，仍是几何参考。逐资产、负载、任务及全部状态保存在`outputs/as2-general-ee-actual-com-20260913/report.md/.json`和两个分别标识实际/参考的NPZ中。边际范围重合不能证明联合姿态覆盖，零动作片段也不等同于预训练demo或学到的满载控制。
+
 实际消费完成后，下一份独立学习提案已准备于`outputs/as2-general-ee-learning-proposal-20260913/`：seed0、1024×24、最多1000更新或90分钟训练循环，新actor/critic/optimizer，model0/final×8任务×名义/满载×Lab/Mu共64个基础评估case。该目录仅为配置、命令和停止边界草案，**尚未启动、尚未获得这份新增学习预算**。训练将保留实际访问读数，联合报告EE位置/姿态、支撑、倒立、数值失败、root移动和任务×负载访问；不以旧actor适配预算或任务选择替代新预算确认。
+
+评估目标已通过真实`PoseSequence.select_ids([0,1,2,3,4,5,6,7],2027)`固定于提案目录的`evaluation-targets/targets.npz`，完整8×3400位置/旋转与源数组及保存回读逐元素一致。Lab的`--target-sequences`和MuJoCo的显式位置/旋转参数将消费同一数组；普通`sample(8)`允许重复抽样，不能替代全8任务覆盖。此CPU准备未运行任何新评估。
 
 学习完成、有限参考跟踪、未见任务泛化、跨仿真迁移及硬件能力是不同证据。当前没有额外学习预算、任务成功或硬件可行性结论。
