@@ -101,6 +101,46 @@ class TrainingTests(unittest.TestCase):
             for name, value in source.alg.actor_critic.state_dict().items():
                 self.assertTrue(torch.equal(value, target.alg.actor_critic.state_dict()[name]), name)
 
+    def test_as2_actor_initialization_retains_new_critic_and_fresh_training_state(self):
+        from pawcerto.methods.umi_on_legs.robot_binding import as2_config
+        cfg = as2_config(load_config())
+        source = UmiTrainer(TensorEnv(), cfg, rollout_steps=4)
+        with torch.no_grad():
+            source.alg.actor_critic.actor[0].weight.add_(.1)
+            source.alg.actor_critic.std.fill_(.37)
+        source.iteration = 50
+        source.total_transitions = 800
+        destination = copy.deepcopy(cfg)
+        destination['pawcerto_robot']['collision_shape_count'] += 3
+        destination['pawcerto_robot']['urdf_path'] = '/new/rail-mounted.urdf'
+        ac = destination['runner']['alg']['actor_critic']
+        ac['num_critic_obs'] += 3
+        ac['critic']['_args_'][0]['in_features'] += 3
+        target = UmiTrainer(TensorEnv(), destination, rollout_steps=4)
+        critic = {k: v.clone() for k, v in target.alg.actor_critic.critic.state_dict().items()}
+        obs = torch.randn(4, 132)
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td)/'source.pt'
+            source.save(path)
+            rng = torch.get_rng_state().clone()
+            target.load_actor(path)
+            self.assertTrue(torch.equal(torch.get_rng_state(), rng))
+            self.assertEqual(target.iteration, 0)
+            self.assertEqual(target.total_transitions, 0)
+            self.assertEqual(len(target.alg.optimizer.state), 0)
+            self.assertEqual(target.alg.learning_rate, destination['runner']['alg']['learning_rate'])
+            for k, v in target.alg.actor_critic.critic.state_dict().items():
+                self.assertTrue(torch.equal(v, critic[k]), k)
+            torch.testing.assert_close(target.alg.actor_critic.actor(obs),
+                                       source.alg.actor_critic.actor(obs), rtol=0, atol=0)
+            self.assertTrue(torch.equal(target.alg.actor_critic.std, source.alg.actor_critic.std))
+            target.config['env']['controller']['scale']['data'][0] *= 2
+            with self.assertRaisesRegex(ValueError, 'observation or action contract'):
+                target.load_actor(path)
+            target.config = load_config()
+            with self.assertRaisesRegex(ValueError, 'AS2-to-AS2'):
+                target.load_actor(path)
+
     def test_adapter_binds_explicit_velocity_variant(self):
         from pawcerto.methods.umi_on_legs.training.isaac_env import UmiIsaacTrainingEnv
         env = self.force_adapter_fixture('reconstructed-solver', False, velocity_override=1000.)

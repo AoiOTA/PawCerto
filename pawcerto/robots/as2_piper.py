@@ -7,10 +7,10 @@ import xml.etree.ElementTree as ET
 from pawcerto.mujoco.as2_piper_asset import CONFIG, assemble
 
 
-def prepare_urdf(output):
+def prepare_urdf(output, config_path=CONFIG):
     output = Path(output).resolve()
     output.mkdir(parents=True, exist_ok=True)
-    config = json.loads(CONFIG.read_text())
+    config = json.loads(Path(config_path).read_text())
     root = assemble(config=config)
     ET.ElementTree(root).write(output / 'source.urdf', encoding='utf-8', xml_declaration=True)
     # World is a URDF floating-base placeholder, not an inertial body. The

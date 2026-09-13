@@ -2,7 +2,7 @@
 
 已接通有限资产族到官方 Isaac Lab/PhysX 的 UMI 训练消费者。目标是让一次 demo 预训练覆盖 AS2/Piper-H 的参数变化，随后冻结策略评估目标平台，必要时再微调。当前交付是资产、配置和真实消费验证，**尚未启动新的预训练或证明迁移成功**。
 
-**装配待修正：** 以下候选仍继承早期 `base_link → Piper` 的0.12 m无质量固定安装假设，尚未还原实际背部导轨与转接板。官方手册已提供背轨孔位/截面图，见[装配依据与缺失量](as2-piper-assembly.md)。这些资产可用于消费者回归，不能当作已校准的AS2 EDU目标装配；正式新学习先完成装配修正，再重建对应资产族。
+**装配候选已重建：** 官方足端CAD导轨与固定Piper-H模型的坐标链已核对，并采用用户选择的先拟定布局：160×180×6 mm横跨板、Piper孔阵列对齐导轨中点。新候选Piper源原点在AS2 `base_link`中约为`[0,0,0.092254551] m`，板质量0.46656 kg；见[装配依据与验证边界](as2-piper-assembly.md)。原0.12 m无质量安装资产保留为历史回归。本页新的学习候选改用独立配置`outputs/as2-rail-mounted-candidate-20260913/assembly.json`；尚未实物标定或启动新学习。
 
 ## 候选参数及其依据
 
@@ -10,12 +10,14 @@
 
 | 条件 | AS2本体质量 kg | 末端额外点质量 kg | 整机质量 kg |
 |---|---:|---:|---:|
-| 源名义资产 | 17.640 | 0 | 22.347 |
-| AS2均匀密度至20 kg | 20.000 | 0 | 24.707 |
-| 上述本体加末端负载 | 20.000 | 2 | 26.707 |
-| 上述负载条件，腿尺寸0.95倍 | 18.570516 | 2 | 25.277516 |
-| 上述负载条件，腿尺寸1.05倍 | 21.579824 | 2 | 28.286824 |
-| 20 kg本体、Piper各体密度1.1倍及负载 | 20.000 | 2 | 27.177700 |
+| 源名义资产加候选板 | 17.640 | 0 | 22.813560 |
+| AS2均匀密度至20 kg | 20.000 | 0 | 25.173560 |
+| 上述本体加末端负载 | 20.000 | 2 | 27.173560 |
+| 上述负载条件，腿尺寸0.95倍 | 18.570516 | 2 | 25.744076 |
+| 上述负载条件，腿尺寸1.05倍 | 21.579824 | 2 | 28.753384 |
+| 20 kg本体、Piper各体密度1.1倍及负载 | 20.000 | 2 | 27.644260 |
+
+上表整机质量均含0.46656 kg候选板。板质量和自身惯量不随AS2本体密度缩放；源AS2质量中是否已包含导轨无法独立分解，目前假定已包含，不重复增加导轨质量。
 
 腿的0.95/1.05倍和臂密度1.1倍是明确的研究假设。它们以AS2/Piper源参数为锚点，不是测得的制造误差。腿几何缩放同时改变段内几何、关节锚点、COM、质量和惯量；固定密度下质量随尺寸三次方、惯量随五次方变化，所以短腿/长腿条件的本体质量不再是20 kg。髋安装间距保持源值。
 
@@ -25,40 +27,47 @@
 
 ## 实际消费方式
 
-所有资产保留18个控制关节、28个物理体、42个碰撞形状，以及原132维actor、269维critic接口。没有增加形态观测或替换原tossing目标池。Critic沿原body/shape顺序读取设置项；这不代表所有变化的物理参数都被显式观测。
+新安装候选各资产保留18个控制关节、28个物理体，新增板与双轨后有45个碰撞形状；actor仍为132维，critic随shape friction输入增至272维。历史无安装件资产为42形状、269维critic。没有增加形态观测或替换原tossing目标池。Critic沿原body/shape顺序读取设置项；这不代表所有变化的物理参数都被显式观测。
 
 训练使用官方多资产spawner，每个资产仍经过原AS2源物理设置。资产族替代旧的逐体加法mass/COM随机化，保留原摩擦、阻尼、PD及任务随机化。名义7克末端link因此保持源质量，不再经过0.01 kg下限裁剪。没有更改默认单资产配方。
 
 冻结评估默认使用记录的名义AS2资产；预训练已经见过该资产时，结果称“无额外适配”，不称未见AS2形态泛化。`--weights`保留目标family的名义评估资产，来源checkpoint资产只记录为初始化来源；`--resume`必须保留原family。不同评估物理条件需要显式选择匹配的USD/URDF或MuJoCo模型，并报告真实资产身份。
+
+`--actor-weights`支持从相同观测与控制语义的AS2 checkpoint仅初始化actor及动作标准差，保留新272维critic、优化器和计数器的初始化状态。这使安装/碰撞几何变化不必强迫策略从随机权重重学；不保证旧策略在新装配上有效，也不跨Go2/AS2复用。原`--weights`仍严格加载完整actor+critic，`--resume`仍保持原机器人、运行时和资产族约束。
 
 源checkout中的复跑路径如下；使用现有官方Lab环境，无需重编PhysX：
 
 ```bash
 .venvs/isaaclab-sim610/bin/python scripts/build_as2_pretraining_assets.py \
   --config configs/as2_pretraining_target_domain.json \
-  --output outputs/as2-pretraining-target-domain-20260913
+  --nominal-config outputs/as2-rail-mounted-candidate-20260913/assembly.json \
+  --output outputs/as2-rail-mounted-candidate-20260913/assets
 
 .venvs/isaaclab-sim610/bin/python scripts/convert_as2_pretraining_usd.py \
-  --family-manifest outputs/as2-pretraining-target-domain-20260913/manifest.json \
+  --family-manifest outputs/as2-rail-mounted-candidate-20260913/assets/manifest.json \
   --device cuda:0 --visualizer none
 
 .venvs/isaaclab-sim610/bin/python scripts/prepare_as2_pretraining.py \
-  --family-manifest outputs/as2-pretraining-target-domain-20260913/manifest.json \
-  --output outputs/as2-pretraining-target-domain-20260913/training-config.json
+  --family-manifest outputs/as2-rail-mounted-candidate-20260913/assets/manifest.json \
+  --output outputs/as2-rail-mounted-candidate-20260913/training-config.json
 
 .venvs/isaaclab-sim610/bin/python scripts/build_as2_pretraining_assets.py \
-  --output outputs/as2-pretraining-target-domain-20260913 --mujoco-only
+  --output outputs/as2-rail-mounted-candidate-20260913/assets --mujoco-only
 ```
 
 数据、厂商源资产和环境准备沿用[研究者指南](researcher-guide.md)。`outputs/`为本地实验产物，不是随源代码分发的资产包；转换记录和源模型必须与配置一起保留。
 
 ## 已有验证及下一次学习预算
 
-两组六资产分别完成CPU几何/惯量检查、官方USD转换和实际6环境训练消费者验证。目标域的逐体质量误差最大2.23e-7 kg、惯量误差最大3.11e-8 kg·m²；6个实际整机质量与上表相符。原UMI reset及25个完整零动作step共消耗104个物理子步，132/269维观测均有限，按原生命周期发生3次done。没有actor推理或优化器更新。这证明参数实际生效，不能证明跟踪、稳定性、预训练或sim2sim成功。证据位于 `outputs/as2-pretraining-target-consumption-20260913/`。
+新安装候选已完成13项CPU资产测试、六个MuJoCo模型实际静态加载与固定板质量验证；新增actor初始化测试证明旧策略输出逐位一致，同时目标critic、优化器和计数器保持新建状态。实际旧`model_4000.pt`也经独立CPU审查：actor输出最大差0，std一致，目标critic和空优化器未被源覆盖。受影响的资产、绑定、family及训练语义回归共46项测试通过（另24项subtests）；不据此推断控制性能。
+
+新装配六资产已通过官方USD转换及原UMI六环境训练消费者：28体/18DoF/45形状，质量、COM和惯量与manifest的最大误差分别为3.992e-7 kg、6.242e-9 m、1.649e-8 kg·m²。reset加25个零动作step共104物理子步，132/272维观测及奖励有限、3次done、0次actor/optimizer调用。MuJoCo名义与20 kg本体加2 kg两个模型各完成0.10秒、4次旧model0 actor调用、20子步，质量22.81356/27.17356 kg。Mu检查仍使用旧checkpoint配置，证明新XML被实际消费，不证明新装配策略适配。完整命令、配置、源身份和读回位于`outputs/as2-rail-mounted-consumption-20260913/`。
+
+以下是**历史0.12 m安装资产**的消费证据：两组六资产分别完成CPU几何/惯量检查、官方USD转换和实际6环境训练消费者验证。目标域的逐体质量误差最大2.23e-7 kg、惯量误差最大3.11e-8 kg·m²；6个实际整机质量为上表对应值减去0.46656 kg候选板。原UMI reset及25个完整零动作step共消耗104个物理子步，132/269维观测均有限，按原生命周期发生3次done。没有actor推理或优化器更新。这证明参数实际生效，不能证明跟踪、稳定性、预训练或sim2sim成功。证据位于 `outputs/as2-pretraining-target-consumption-20260913/`。
 
 另生成了带原地面、18关节电机和默认姿态的MuJoCo模型，路径及身份保存在独立`mujoco-manifest.json`，原Lab manifest不变。模型构建的中间XML舍入曾使变体质量检查失败；传入资产树的分支改为保留导入惯性精度，历史默认构建路径保持原行为。新nominal XML因此有独立身份，不能声称与历史模型逐位相同。使用已有model0，名义和20 kg本体加2 kg模型均完成正式CLI的0.10秒消费：各4次actor调用、20个物理子步、4个有限端点。真实运行体质量分别为22.347/26.707 kg。该短检查证明显式`--model-path`被消费，不是17秒稳定性证据；产物在`outputs/as2-pretraining-target-mujoco-consumption-20260913/`。
 
-供审阅的首轮学习候选为seed0、1024环境、24步rollout、最多1000次更新，共最多24,576,000 transitions；训练墙钟上限建议90分钟，先到哪个边界就结束，不自动补足或延长。固定原tossing池和本页资产族，不叠加奖励搜索或额外种子。已生成的审阅配置写入1024/1000，但本轮没有启动它；上面的通用prepare命令沿用输入配方，实际训练须明确传入预算覆盖。
+供审阅的新安装学习候选从旧AS2 `model_4000.pt`仅初始化actor及std；该源策略已有失稳记录，初始化本身仍是待检验假设。使用seed0、1024环境、24步rollout、最多1000次更新，共最多24,576,000 transitions；训练墙钟上限建议90分钟，先到哪个边界就结束，不自动补足或延长。固定原tossing池和本页资产族，不叠加奖励搜索或额外种子。新候选目录的`training-config.json`及`learning-proposal.json`已写入1024/1000和90分钟建议边界，但本轮没有启动它；上面的通用prepare命令沿用输入配方，实际训练须明确传入预算覆盖。
 
 学习前保存该次model0，预算结束保存最终模型。至少在名义AS2与20 kg本体加2 kg点质量两个具名条件上，分别对model0/最终模型运行相同固定16目标和17秒完整episode，报告Lab与MuJoCo的完整计数、数值失败、倒立/支撑及EE位置/姿态误差。训练reset统计单列，失败前缀不混入完整episode均值。固定目标池结果仍不能替代未见目标或硬件验收。
 

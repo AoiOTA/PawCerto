@@ -138,6 +138,24 @@ class UmiTrainer:
             state['env_training_state'] = self.env.training_state_dict()
         torch.save(state, path)
 
+    def load_actor(self, path):
+        """Initialize an AS2 actor across assembly changes, retaining a fresh critic."""
+        from ..robot_binding import require_same_as2_actor
+        if self.iteration or self.total_transitions or self.alg.optimizer.state:
+            raise ValueError('Actor initialization requires a fresh trainer')
+        state = torch.load(path, map_location='cpu', weights_only=False)
+        require_same_as2_actor(self.config, state.get('config', {}))
+        current = self.alg.actor_critic.state_dict()
+        source = {k: v for k, v in state['model_state_dict'].items()
+                  if k == 'std' or k.startswith('actor.')}
+        expected = {k for k in current if k == 'std' or k.startswith('actor.')}
+        if set(source) != expected or any(source[k].shape != current[k].shape for k in expected):
+            raise ValueError('AS2 actor checkpoint tensors differ from the destination network')
+        current.update(source)
+        self.alg.actor_critic.load_state_dict(current, strict=True)
+        self.obs = self.critic_obs = None
+        return state.get('infos')
+
     def load(self, path, load_optimizer=True):
         # Load RNG ByteTensors on CPU even when training is on CUDA.
         state = torch.load(path, map_location='cpu', weights_only=False)

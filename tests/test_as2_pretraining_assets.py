@@ -12,6 +12,36 @@ from pawcerto.as2_pretraining_assets import build_family, inertial_properties, m
 from pawcerto.mujoco.as2_piper_asset import CONFIG
 
 
+def test_independent_assembly_config_changes_real_fixed_mount(tmp_path):
+    original = CONFIG.read_bytes()
+    config = json.loads(original)
+    config['mount']['xyz'] = [.015, -.025, .145]
+    config['default_base_xyz'] = [0, 0, .6]
+    nominal_path = tmp_path/'assembly.json'
+    nominal_path.write_text(json.dumps(config))
+    from pawcerto.as2_pretraining_assets import FAMILY_CONFIG
+    family_config = json.loads(FAMILY_CONFIG.read_text())
+    family_config['variants'] = family_config['variants'][:1]
+    family_path = tmp_path/'family.json'
+    family_path.write_text(json.dumps(family_config))
+    result = build_family(tmp_path/'assets', family_path, nominal_config_path=nominal_path)
+    assert result['source']['nominal_config_path'] == str(nominal_path)
+    model = mujoco.MjModel.from_xml_path(result['variants'][0]['source_urdf_path'])
+    data = mujoco.MjData(model)
+    data.qpos[:3] = 0
+    data.qpos[3:7] = [1, 0, 0, 0]
+    mujoco.mj_kinematics(model, data)
+    np.testing.assert_allclose(data.body('piper_base_link').xpos, config['mount']['xyz'], atol=1e-10)
+    from pawcerto.as2_pretraining_assets import build_mujoco_family
+    converted = build_mujoco_family(tmp_path/'assets')
+    model = mujoco.MjModel.from_xml_path(converted['variants'][0]['mujoco_path'])
+    data = mujoco.MjData(model)
+    mujoco.mj_resetDataKeyframe(model, data, 0)
+    mujoco.mj_kinematics(model, data)
+    np.testing.assert_allclose(data.body('piper_base_link').xpos, [.015, -.025, .745], atol=1e-10)
+    assert CONFIG.read_bytes() == original
+
+
 @pytest.fixture(scope='module')
 def family(tmp_path_factory):
     return build_family(tmp_path_factory.mktemp('as2_family'))

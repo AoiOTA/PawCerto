@@ -13,7 +13,7 @@ import xml.etree.ElementTree as ET
 import numpy as np
 from scipy.spatial.transform import Rotation
 
-from pawcerto.mujoco.as2_piper_asset import CONFIG, numbers, transform, urdf_fk
+from pawcerto.mujoco.as2_piper_asset import CONFIG, numbers, transform, urdf_fk, merge_mount_plate_inertia
 from pawcerto.robots.as2_piper import prepare_urdf
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -151,7 +151,10 @@ def transform_variant(root, parameters, nominal):
         ratio = base_ratio if name == 'base_link' else _positive(ratios.get(name, 1), f'{name} mass ratio')
         if not name.startswith('piper_'):
             ratio *= as2_ratio
-        _scale_link(link, scale, ratio)
+        if name == 'base_link' and 'rail_mount' in nominal and ratio != 1:
+            merge_mount_plate_inertia(link, nominal['rail_mount']['plate'], merged_base_ratio=ratio)
+        else:
+            _scale_link(link, scale, ratio)
     if leg_scale != 1:
         for joint in out.findall('joint'):
             if joint.find('parent').get('link') in leg_names:
@@ -194,7 +197,7 @@ def audit_variant(source, merged, original_source, original_merged, nominal):
                     feet_m={f'{leg}_foot': poses[f'{leg}_foot'][:3,3].tolist() for leg in ('FR','FL','RR','RL')}))
 
 
-def build_family(output, config_path=FAMILY_CONFIG):
+def build_family(output, config_path=FAMILY_CONFIG, *, nominal_config_path=CONFIG):
     output = Path(output).resolve()
     config_path = Path(config_path).resolve()
     family = json.loads(config_path.read_text())
@@ -209,19 +212,23 @@ def build_family(output, config_path=FAMILY_CONFIG):
             raise ValueError('Each variant requires name, assumption and parameters')
         if not entry['name'].replace('_','').isalnum() or not entry['name'].isascii():
             raise ValueError('Variant name must be an ASCII alphanumeric/underscore directory name')
-    nominal = json.loads(CONFIG.read_text())
-    original_tree, preparation = prepare_urdf(output/'nominal')
+    nominal_config_path = Path(nominal_config_path).resolve()
+    nominal = json.loads(nominal_config_path.read_text())
+    original_tree, preparation = prepare_urdf(output/'nominal', config_path=nominal_config_path)
     original_merged = original_tree.getroot()
     original_source = ET.parse(output/'nominal/source.urdf').getroot()
     digest = lambda p: hashlib.sha256(Path(p).read_bytes()).hexdigest()
     result = dict(schema_version=1, description=family['description'], parameter_ranges=family['parameter_ranges'],
         source=dict(family_config_path=str(config_path), family_config_sha256=digest(config_path),
-                    nominal_config_sha256=digest(CONFIG), nominal_source_sha256=digest(output/'nominal/source.urdf')),
+                    nominal_config_sha256=digest(nominal_config_path),
+                    nominal_source_sha256=digest(output/'nominal/source.urdf')),
         joint_names=nominal['controlled_joint_order'], body_names=preparation['body_names'],
         collision_count=len(original_merged.findall('.//collision')),
         default_joint_positions=nominal['default_joint_positions'], tcp=nominal['tcp'],
         default_base_xyz=nominal['default_base_xyz'], variants=[],
         evidence='CPU URDF geometry/inertia/FK and unchanged interface; not converted USD, training, calibrated hardware or WBC acceptance.')
+    if nominal_config_path != CONFIG.resolve():
+        result['source']['nominal_config_path'] = str(nominal_config_path)
     for entry in entries:
         folder = output/entry['name']; folder.mkdir(parents=True, exist_ok=True)
         source = transform_variant(original_source, entry['parameters'], nominal)
@@ -254,6 +261,9 @@ def build_mujoco_family(output):
     manifest_path = output/'manifest.json'
     original_bytes = manifest_path.read_bytes()
     family = json.loads(original_bytes)
+    nominal_config_path = Path(family['source'].get('nominal_config_path', CONFIG))
+    if hashlib.sha256(nominal_config_path.read_bytes()).hexdigest() != family['source']['nominal_config_sha256']:
+        raise ValueError('Changed nominal assembly configuration in AS2 family')
     records = []
     for entry in family['variants']:
         source_path = Path(entry['source_urdf_path'])
@@ -261,7 +271,7 @@ def build_mujoco_family(output):
         if hashlib.sha256(source_bytes).hexdigest() != entry['source_urdf_sha256']:
             raise ValueError(f'Changed family source: {source_path}')
         folder = source_path.parent/'mujoco'
-        report = build(folder, source_root=ET.fromstring(source_bytes), static_only=True)
+        report = build(folder, config_path=nominal_config_path, source_root=ET.fromstring(source_bytes), static_only=True)
         if source_path.read_bytes() != source_bytes:
             raise ValueError(f'Family source changed during conversion: {source_path}')
         np.testing.assert_allclose(report['total_mass_kg'], entry['total_mass_kg'], atol=1e-8, rtol=0)

@@ -39,16 +39,47 @@ def require_same_robot(config, source_config):
         raise ValueError('Checkpoint robot binding differs; AS2 requires its own training, not Go2 weight reuse')
 
 
-def as2_config(source):
+def require_same_as2_actor(config, source_config):
+    """Allow AS2 assembly changes with the same policy input/action meanings."""
+    def contract(cfg):
+        binding = robot_binding(cfg)
+        if binding['name'] != 'as2_piper':
+            raise ValueError('--actor-weights supports AS2-to-AS2 initialization only')
+        env = cfg['env']
+        task = env['tasks']['reaching']
+        ac = cfg['runner']['alg']['actor_critic']
+        return dict(
+            robot={k: binding[k] for k in ('name', 'root_body', 'tcp_body', 'tcp_xyz',
+                                          'tcp_rotation', 'joint_names')},
+            actor={k: ac[k] for k in ('actor', 'num_actor_obs', 'num_actions')},
+            state={name: {k: attr[k] for k in ('key', 'scale', 'noise_std', 'offset', 'clip')}
+                   for name, attr in env['state_obs'].items() if not name.startswith('_')},
+            history=env['obs_history_len'], frame_dim=env['cfg']['env']['num_observations'],
+            task={k: task[k] for k in ('pose_latency', 'target_relative_to_base',
+                                      'target_obs_times', 'pos_obs_scale', 'pos_obs_clip', 'orn_obs_scale')},
+            trajectory_dt=task['sequence_sampler']['dt'],
+            controller={k: env['controller'][k]['data']
+                        for k in ('offset', 'scale', 'kp', 'kd', 'torque_limit')},
+            control_dim=env['controller']['control_dim'],
+            decimation=env['controller']['decimation_count'], dt=env['cfg']['sim']['dt'],
+            max_action=env['max_action_value'], delay=env['ctrl_delay']['data'],
+            buffer_len=env['ctrl_buf_len'], dense_rewards=env['dense_rewards'])
+    if contract(config) != contract(source_config):
+        raise ValueError('AS2 actor observation or action contract differs')
+
+
+def as2_config(source, *, nominal_path=None, urdf_path=None):
     """Adapt physical inputs only; task, PPO, delays and reward formulas are retained."""
     if source.get('pawcerto_robot'):
         if robot_binding(source)['name'] != 'as2_piper':
             raise ValueError('Cannot adapt an unknown robot')
-        return deepcopy(source)
+        if nominal_path is None and urdf_path is None:
+            return deepcopy(source)
     config = deepcopy(source)
-    nominal_path = ROOT/'configs/as2_piper.json'
+    custom_asset = nominal_path is not None or urdf_path is not None
+    nominal_path = Path(nominal_path).resolve() if nominal_path is not None else ROOT/'configs/as2_piper.json'
     nominal = json.loads(nominal_path.read_text())
-    urdf = ROOT/'reference/as2_piper/robot.urdf'
+    urdf = Path(urdf_path).resolve() if urdf_path is not None else ROOT/'reference/as2_piper/robot.urdf'
     asset = ET.parse(urdf)
     names = nominal['controlled_joint_order']
     limits = read_joint_limits(urdf, names)
@@ -61,14 +92,15 @@ def as2_config(source):
     binding = dict(name='as2_piper', root_body='base_link', tcp_body=nominal['tcp']['body'],
                    tcp_xyz=nominal['tcp']['xyz'], tcp_rotation=[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]],
                    joint_names=names, feet=FEET, head_bodies=[],
-                   usd_path=str(ROOT/'reference/isaac/as2_piper/usd_path.txt'),
-                   urdf_path=str(ROOT/'reference/isaac/as2_piper/merged.urdf'),
-                   mujoco_path=str(ROOT/'reference/as2_piper/robot.xml'),
+                   usd_path=str(urdf.with_name('usd_path.txt') if custom_asset else ROOT/'reference/isaac/as2_piper/usd_path.txt'),
+                   urdf_path=str(urdf if custom_asset else ROOT/'reference/isaac/as2_piper/merged.urdf'),
+                   mujoco_path=str(urdf.parent/'mujoco/robot.xml' if custom_asset else ROOT/'reference/as2_piper/robot.xml'),
                    nominal_input=file_identity(nominal_path), source_urdf=file_identity(urdf),
                    simulation_choices='Nominal uncalibrated PD; source effort and velocity bounds; stock gripper fixed 40 mm; no hardware identification',
                    collision_shape_count=shape_count)
     config['pawcerto_robot'] = binding
     config.pop('pawcerto_asset', None)
+    config.pop('pawcerto_asset_family', None)
     # This nominal adaptation selects source limits, including when its recipe
     # was copied from an earlier Go2 experiment with a 1000 rad/s override.
     config.pop('joint_velocity_limit_override_rad_s', None)

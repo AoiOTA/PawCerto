@@ -22,6 +22,7 @@ def main():
     parser.add_argument('--iterations',type=int,default=None,help='Default: original config max_iterations')
     parser.add_argument('--resume',type=Path)
     parser.add_argument('--weights',type=Path,help='Initialize original actor+critic weights without optimizer/iteration')
+    parser.add_argument('--actor-weights',type=Path,help='Initialize an AS2 actor and action std across assembly changes; keep a fresh critic and optimizer')
     parser.add_argument('--seed',type=int,default=0)
     parser.add_argument('--force-signal',choices=('reconstructed-solver','normal-contact'),
                         default='reconstructed-solver',help='EMD input; normal-contact explicitly selects the previous proxy')
@@ -30,8 +31,8 @@ def main():
     from isaaclab.app import AppLauncher
     AppLauncher.add_app_launcher_args(parser)
     args=parser.parse_args()
-    if args.resume and args.weights:
-        parser.error('--resume and --weights are mutually exclusive')
+    if sum(p is not None for p in (args.resume, args.weights, args.actor_weights)) > 1:
+        parser.error('--resume, --weights and --actor-weights are mutually exclusive')
     if args.save_every is not None and args.save_every < 1:
         parser.error('--save-every must be positive')
     launcher=AppLauncher(args)
@@ -44,20 +45,22 @@ def main():
         from pawcerto.methods.umi_on_legs.training.isaac_env import UmiIsaacTrainingEnv
         from pawcerto.methods.umi_on_legs.training.semantics import runtime_contract,require_resume_contract
         random.seed(args.seed); np.random.seed(args.seed); torch.manual_seed(args.seed)
-        from pawcerto.methods.umi_on_legs.robot_binding import as2_config,robot_binding,joint_order,require_same_robot
+        from pawcerto.methods.umi_on_legs.robot_binding import as2_config,robot_binding,joint_order,require_same_robot,require_same_as2_actor
         config=load_config(args.config)
         if args.robot == 'as2_piper':
             config=as2_config(config)
         binding=robot_binding(config)
         if args.robot is not None and args.robot != binding['name']:
             raise ValueError('--robot disagrees with the saved configuration')
-        source_path=args.resume or args.weights
+        source_path=args.resume or args.weights or args.actor_weights
         source_checkpoint=torch.load(source_path,map_location='cpu',weights_only=False) if source_path else None
         if source_checkpoint is not None:
-            require_same_robot(config,source_checkpoint.get('config',{}))
+            check = require_same_as2_actor if args.actor_weights else require_same_robot
+            check(config,source_checkpoint.get('config',{}))
         source_asset=(source_checkpoint.get('config',{}).get('pawcerto_asset') if source_checkpoint is not None else config.get('pawcerto_asset'))
         from pawcerto.methods.umi_on_legs.pretraining import resolve_training_asset
-        config['pawcerto_asset'] = resolve_training_asset(config, source_asset, args.usd_path, args.urdf_path)
+        destination_asset = config.get('pawcerto_asset') if args.actor_weights else source_asset
+        config['pawcerto_asset'] = resolve_training_asset(config, destination_asset, args.usd_path, args.urdf_path)
         usd_path = Path(config['pawcerto_asset']['usd_path'])
         urdf_path = Path(config['pawcerto_asset']['urdf_path'])
         if config['env']['tasks']['reaching']['sequence_sampler'].get('trajectory_selection') and not args.split_manifest:
@@ -80,7 +83,7 @@ def main():
                 require_resume_family(source_checkpoint.get('config', {}), config)
             del source_checkpoint
         config['training_initialization']=dict(
-            mode='resume' if args.resume else 'weights' if args.weights else 'random',
+            mode='resume' if args.resume else 'weights' if args.weights else 'actor_weights' if args.actor_weights else 'random',
             checkpoint=str(source_path.resolve()) if source_path else None,
             source_pawcerto_runtime=source_runtime,
             source_pawcerto_asset=source_asset if source_path else None)
@@ -92,6 +95,8 @@ def main():
             trainer.load(args.resume)
         elif args.weights:
             trainer.load(args.weights,load_optimizer=False)
+        elif args.actor_weights:
+            trainer.load_actor(args.actor_weights)
         args.output.mkdir(parents=True,exist_ok=True)
         (args.output/'config.json').write_text(json.dumps(config,indent=2))
         iterations=config['runner']['max_iterations'] if args.iterations is None else args.iterations

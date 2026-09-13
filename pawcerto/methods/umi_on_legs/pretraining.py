@@ -9,7 +9,6 @@ from .robot_binding import as2_config, robot_binding
 
 def configure_asset_family(source, manifest_path):
     """Record converted assets consumed by the existing UMI training entrypoint."""
-    config = deepcopy(source) if robot_binding(source)['name'] == 'as2_piper' else as2_config(source)
     manifest_path = Path(manifest_path).resolve()
     manifest = json.loads(manifest_path.read_text())
     variants = []
@@ -23,6 +22,14 @@ def configure_asset_family(source, manifest_path):
     if len(names) != len(set(names)) or 'nominal' not in names:
         raise ValueError('AS2 asset family requires unique names and a nominal evaluation asset')
     nominal = variants[names.index('nominal')]
+    nominal_path = manifest.get('source', {}).get('nominal_config_path')
+    if nominal_path is not None:
+        if file_identity(Path(nominal_path))['sha256'] != manifest['source']['nominal_config_sha256']:
+            raise ValueError('Changed nominal assembly configuration in AS2 family')
+        config = as2_config(source, nominal_path=nominal_path, urdf_path=nominal['urdf']['path'])
+    else:
+        # Historical manifests precede assembly selection and use the original binding.
+        config = deepcopy(source) if robot_binding(source)['name'] == 'as2_piper' else as2_config(source)
     config['pawcerto_asset'] = dict(
         usd_path=nominal['usd']['path'], usd_sha256=nominal['usd']['sha256'],
         urdf_path=nominal['urdf']['path'], urdf_sha256=nominal['urdf']['sha256'])

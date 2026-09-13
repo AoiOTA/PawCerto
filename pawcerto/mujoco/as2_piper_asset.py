@@ -30,6 +30,60 @@ def verify_sources(source_dir):
     return manifest
 
 
+def mount_plate_properties(plate):
+    """The fixed, base-axis-aligned rectangular mounting plate only."""
+    size = np.asarray(plate['size_m'], dtype=float)
+    com = np.asarray(plate['com_base_m'], dtype=float)
+    density = float(plate['density_kg_m3'])
+    if (size.shape != (3,) or com.shape != (3,) or not np.isfinite(size).all()
+            or not np.isfinite(com).all() or np.any(size <= 0)
+            or not np.isfinite(density) or density <= 0):
+        raise ValueError('Mount plate requires positive dimensions/density and finite base COM')
+    mass = density * np.prod(size)
+    inertia = np.diag(mass / 12 * (np.sum(size**2) - size**2))
+    return mass, com, inertia
+
+
+def merge_mount_plate_inertia(link, plate, *, merged_base_ratio=None):
+    """Add the plate, or scale an already merged original base while fixing plate mass.
+
+    First/second moments about the link origin are additive. Subtracting the
+    known plate moments before scaling avoids scaling its density with AS2.
+    """
+    added, added_com, added_tensor = mount_plate_properties(plate)
+    inertial = link.find('inertial')
+    origin = inertial.find('origin')
+    com = np.fromstring(origin.get('xyz', '0 0 0'), sep=' ')
+    rotation = Rotation.from_euler('xyz', np.fromstring(origin.get('rpy', '0 0 0'), sep=' ')).as_matrix()
+    mass = float(inertial.find('mass').get('value'))
+    keys = ('ixx', 'ixy', 'ixz', 'iyy', 'iyz', 'izz')
+    xx, xy, xz, yy, yz, zz = (float(inertial.find('inertia').get(k)) for k in keys)
+    tensor = rotation @ np.array([[xx, xy, xz], [xy, yy, yz], [xz, yz, zz]]) @ rotation.T
+    def parallel(m, c):
+        return m * (np.dot(c, c) * np.eye(3) - np.outer(c, c))
+    first = mass * com
+    second = tensor + parallel(mass, com)
+    plate_second = added_tensor + parallel(added, added_com)
+    if merged_base_ratio is not None:
+        ratio = float(merged_base_ratio)
+        if not np.isfinite(ratio) or ratio <= 0 or mass <= added:
+            raise ValueError('Expected positive original base mass and density ratio')
+        mass = (mass - added) * ratio
+        first = (first - added * added_com) * ratio
+        second = (second - plate_second) * ratio
+    mass += added
+    com = (first + added * added_com) / mass
+    tensor = second + plate_second - parallel(mass, com)
+    eig = np.linalg.eigvalsh(tensor)
+    if eig.min() <= 0 or eig[-1] > eig[0] + eig[1] + 1e-10:
+        raise ValueError('Invalid combined base/plate inertia')
+    inertial.find('mass').set('value', str(float(mass)))
+    origin.set('xyz', numbers(com))
+    origin.set('rpy', '0 0 0')
+    for key, value in zip(keys, (tensor[0, 0], tensor[0, 1], tensor[0, 2], tensor[1, 1], tensor[1, 2], tensor[2, 2])):
+        inertial.find('inertia').set(key, str(float(value)))
+
+
 def assemble(source_dir=SOURCES, config=None):
     """Retain vendor inertials, joints and collisions; omit rendering-only visuals."""
     source_dir = Path(source_dir).resolve()
@@ -95,6 +149,25 @@ def assemble(source_dir=SOURCES, config=None):
             if not path.is_file():
                 raise FileNotFoundError(path)
             mesh.set('filename', str(path))
+    if 'rail_mount' in config:
+        mounting = config['rail_mount']
+        base = root.find("link[@name='base_link']")
+        # Exported rail vertices already use base_link axes and metres.
+        if len(mounting['rails']) != 2:
+            raise ValueError('Expected the two registered AS2 rails')
+        for rail in mounting['rails']:
+            path = Path(rail['mesh_path']).resolve()
+            if hashlib.sha256(path.read_bytes()).hexdigest() != rail['sha256']:
+                raise ValueError(f'Changed registered rail mesh: {path}')
+            collision = ET.SubElement(base, 'collision', name=rail['name'])
+            ET.SubElement(collision, 'origin', xyz='0 0 0', rpy='0 0 0')
+            ET.SubElement(ET.SubElement(collision, 'geometry'), 'mesh', filename=str(path))
+        plate = mounting['plate']
+        mount_plate_properties(plate)
+        collision = ET.SubElement(base, 'collision', name='mount_plate')
+        ET.SubElement(collision, 'origin', xyz=numbers(plate['com_base_m']), rpy='0 0 0')
+        ET.SubElement(ET.SubElement(collision, 'geometry'), 'box', size=numbers(plate['size_m']))
+        merge_mount_plate_inertia(base, plate)
     mount = config['mount']
     joint = ET.SubElement(root, 'joint', name='piper_mount', type='fixed')
     ET.SubElement(joint, 'parent', link=mount['parent'])
