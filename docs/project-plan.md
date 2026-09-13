@@ -188,6 +188,8 @@ No extra seeds, reward search, extended training or hardware execution are
 automatically included. A robot-name change, completed batch or successful
 asset load is not a completed learned transfer.
 
+A subsequent user-approved AS2 assembly investigation registered the official foot-AS2 rails and Piper mounting frame, built an explicit 160×180×6 mm plate candidate, and verified the six assets in official Lab and MuJoCo. On 2026-09-13 the user then approved a separate adaptation experiment: old-AS2 actor/std initialization, fresh critic/optimizer, seed 0, 1024×24, at most 1000 additional updates or 90 minutes of training-loop time at a completed-update boundary, followed by matched model0/final fixed16/full17s Lab and MuJoCo evaluation on nominal and 20 kg-body/2 kg-payload conditions. The [new protocol and limitations](as2-pretraining-family.md) preserve the old failed result; copied weights and loadable assets are not proof of adaptation. The original RoboDuet budget remains independent.
+
 After the completed AS2 single-candidate experiment, UniFP's separately bounded
 [official Lab integration](unifp-lab-runtime.md) completed 20+1 updates, a repaired
 zero-update strict force-stage probe and one [500-step evaluation/export check](unifp-evaluation.md).

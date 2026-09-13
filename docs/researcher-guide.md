@@ -40,8 +40,8 @@ final paired Lab evaluation and independent export consumer. The [completed resu
 records improved Lab tracking with inversions, failed MuJoCo transfer and failed
 export consumption. That one-candidate run is finished. The subsequent
 [target-aware pretraining family](as2-pretraining-family.md) now has generated
-assets and actual Lab/MuJoCo consumption evidence; new learning has not started.
-Its proposed learning budget is separate from the completed candidate. Run scripts from
+assets with registered rails and an explicit plate, plus actual Lab/MuJoCo consumption evidence.
+A separate 1024-environment, 1000-update/90-minute adaptation budget has now been approved; its learning results remain pending. Explicit `--actor-weights` keeps a fresh critic/optimizer while initializing the AS2 actor/std, and `--max-training-seconds` records a training-loop limit checked at completed-update boundaries. Run scripts from
 the source checkout: a wheel does not bundle the scripts, vendor inputs or local
 experiment outputs. Coordinate simulator work with the assigned GPU operator;
 these examples do not authorize duplicate training services.

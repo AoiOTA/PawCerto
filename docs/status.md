@@ -9,6 +9,9 @@ integration at the evidence levels below; full force-control
 learning and the remaining method integrations are unfinished.
 See [the updated sequence](project-plan.md#updated-execution-priority-2026-09-12).
 
+On 2026-09-13 the user separately authorized one [rail-mounted AS2 adaptation](as2-pretraining-family.md): initialize actor/std from the old AS2 model 4000, use a fresh critic/optimizer, and train seed 0 on the six target assets with 1024 environments × 24 rollout steps, stopping after 1000 new updates or 90 minutes of training-loop time at a completed-update boundary. Matched model-0/final Lab and MuJoCo fixed16 evaluations follow. Asset consumption and exact actor-copy parity are complete; new learning/transfer results remain pending. The source actor's earlier instability is retained, and the old 4000-update experiment is not extended or relabeled.
+
+
 RoboDuet's seed-0, 4096-environment, 50000-update learning experiment has begun
 real PPO updates after an initialization-memory repair. The first two attempts
 did not produce updates: one was killed by kernel OOM and another coincided

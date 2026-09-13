@@ -1,8 +1,10 @@
 """Train original UMI PPO on the original robot in Isaac Lab PhysX."""
 import argparse
 import json
+import math
 from pathlib import Path
 import sys
+import time
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -20,6 +22,7 @@ def main():
     parser.add_argument('--robot', choices=('go2_arx5','as2_piper'), help='Adapt a fresh configuration; saved AS2 configurations retain their binding')
     parser.add_argument('--num-envs',type=int,default=4096)
     parser.add_argument('--iterations',type=int,default=None,help='Default: original config max_iterations')
+    parser.add_argument('--max-training-seconds',type=float,help='Stop at the first update boundary after this training-loop wall time, then save; excludes setup and evaluation')
     parser.add_argument('--resume',type=Path)
     parser.add_argument('--weights',type=Path,help='Initialize original actor+critic weights without optimizer/iteration')
     parser.add_argument('--actor-weights',type=Path,help='Initialize an AS2 actor and action std across assembly changes; keep a fresh critic and optimizer')
@@ -35,6 +38,8 @@ def main():
         parser.error('--resume, --weights and --actor-weights are mutually exclusive')
     if args.save_every is not None and args.save_every < 1:
         parser.error('--save-every must be positive')
+    if args.max_training_seconds is not None and (not math.isfinite(args.max_training_seconds) or args.max_training_seconds <= 0):
+        parser.error('--max-training-seconds must be finite and positive')
     launcher=AppLauncher(args)
     try:
         import random
@@ -87,6 +92,11 @@ def main():
             checkpoint=str(source_path.resolve()) if source_path else None,
             source_pawcerto_runtime=source_runtime,
             source_pawcerto_asset=source_asset if source_path else None)
+        iterations=config['runner']['max_iterations'] if args.iterations is None else args.iterations
+        save_every=config['runner']['ckpt_save_interval'] if args.save_every is None else args.save_every
+        if args.max_training_seconds is not None:
+            config['training_budget'] = dict(additional_updates=iterations,
+                max_training_seconds=args.max_training_seconds, boundary='completed update; excludes setup and evaluation')
         runtime=Go2Arx5Isaac(config,joint_order(config,args.joint_names),args.num_envs,args.device,
                            usd_path=usd_path,urdf_path=urdf_path,training=True,force_signal=args.force_signal)
         env=UmiIsaacTrainingEnv(runtime,config,args.trajectory,args.seed)
@@ -99,11 +109,14 @@ def main():
             trainer.load_actor(args.actor_weights)
         args.output.mkdir(parents=True,exist_ok=True)
         (args.output/'config.json').write_text(json.dumps(config,indent=2))
-        iterations=config['runner']['max_iterations'] if args.iterations is None else args.iterations
-        save_every=config['runner']['ckpt_save_interval'] if args.save_every is None else args.save_every
         trainer.save(args.output/f'model_{trainer.iteration}.pt')
+        started=time.monotonic()
+        stop_reason='updates'
         with (args.output/'metrics.jsonl').open('a') as metrics:
             for _ in range(iterations):
+                if args.max_training_seconds is not None and time.monotonic()-started >= args.max_training_seconds:
+                    stop_reason='training_time'
+                    break
                 stats=trainer.train_iteration()
                 line=json.dumps(stats)
                 metrics.write(line+'\n');metrics.flush()
@@ -111,6 +124,10 @@ def main():
                 if trainer.iteration%save_every==0:
                     trainer.save(args.output/f'model_{trainer.iteration}.pt')
         trainer.save(args.output/f'model_{trainer.iteration}.pt')
+        if args.max_training_seconds is not None:
+            (args.output/'training-stop.json').write_text(json.dumps(dict(
+                reason=stop_reason, iteration=trainer.iteration, total_transitions=trainer.total_transitions,
+                training_seconds=time.monotonic()-started, budget=config['training_budget']),indent=2)+'\n')
     except BaseException:
         import traceback
         traceback.print_exc()
