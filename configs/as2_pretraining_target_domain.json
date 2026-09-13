@@ -1,0 +1,179 @@
+{
+  "schema_version": 1,
+  "description": "Finite target-aware AS2 EDU/Piper-H simulation candidates. Brochure ~20kg AS2 EDU including battery and Piper-H 2kg payload guide assumed endpoints only. Unknown real payload/mount/COM are not calibrated. Six named combinations, not a continuous/full target-domain guarantee.",
+  "parameter_ranges": {
+    "status": "Proposed target-domain stress candidates; no hardware capacity or successful pretraining claim. Uniform density hypothesis is deliberately distinct from placing missing mass at the base.",
+    "as2_mass_ratio": {
+      "nominal": 1.0,
+      "source_body_kg": 17.64,
+      "target_anchor_kg": 20.0,
+      "selected": [
+        1.0,
+        1.1337868480725624
+      ],
+      "distribution_assumption": "Multiply every positive-mass non-Piper body mass and COM inertia by the same ratio; geometry and COM locations unchanged. Independent base_mass_ratio remains additionally multiplicative."
+    },
+    "leg_scale": {
+      "nominal": 1.0,
+      "selected": [
+        0.95,
+        1.0,
+        1.05
+      ],
+      "meaning": "All four hip/thigh/calf/foot links isotropic; mass multiplier as2_ratio*s^3 and inertia multiplier as2_ratio*s^5. Torso anchors unchanged."
+    },
+    "piper_link_mass_ratios": {
+      "nominal": 1.0,
+      "selected": [
+        1.0,
+        1.1
+      ],
+      "meaning": "Each positive-mass Piper link including gripper; AS2 density factor never affects Piper."
+    },
+    "payload_mass_kg": {
+      "nominal": 0.0,
+      "selected": [
+        0.0,
+        2.0
+      ],
+      "model": "point",
+      "meaning": "2kg brochure-based simulation stress endpoint; unknown real task payload. Zero collision geometry/own spin inertia; parallel-axis contribution retained. Not proof of rated fully extended control."
+    },
+    "nominal_group_masses_kg": {
+      "as2_base": 8.8,
+      "as2_legs": 8.84,
+      "piper": 4.707
+    },
+    "candidate_mass_expectations_kg": {
+      "nominal": {
+        "as2": 17.64,
+        "piper_without_extra_payload": 4.707,
+        "extra_tcp_payload": 0,
+        "total": 22.347
+      },
+      "as2_density_20kg": {
+        "as2": 20.0,
+        "piper_without_extra_payload": 4.707,
+        "extra_tcp_payload": 0,
+        "total": 24.707
+      },
+      "as2_density_20kg_tcp2kg": {
+        "as2": 20.0,
+        "piper_without_extra_payload": 4.707,
+        "extra_tcp_payload": 2.0,
+        "total": 26.707
+      },
+      "as2_density_20kg_tcp2kg_legs095": {
+        "as2": 18.57051587301587,
+        "piper_without_extra_payload": 4.707,
+        "extra_tcp_payload": 2.0,
+        "total": 25.277515873015872
+      },
+      "as2_density_20kg_tcp2kg_legs105": {
+        "as2": 21.57982426303855,
+        "piper_without_extra_payload": 4.707,
+        "extra_tcp_payload": 2.0,
+        "total": 28.28682426303855
+      },
+      "as2_density_20kg_tcp2kg_arm110": {
+        "as2": 20.0,
+        "piper_without_extra_payload": 5.177700000000001,
+        "extra_tcp_payload": 2.0,
+        "total": 27.1777
+      }
+    }
+  },
+  "variants": [
+    {
+      "name": "nominal",
+      "assumption": "Unchanged source nominal AS2 17.640kg + Piper assembly 4.707kg; not identified EDU hardware.",
+      "parameters": {}
+    },
+    {
+      "name": "as2_density_20kg",
+      "assumption": "Uniform density scaling of every positive-mass non-Piper link maps source AS2 17.640kg to 20kg at nominal geometry. Research allocation, not measured battery or component masses.",
+      "parameters": {
+        "as2_mass_ratio": 1.1337868480725624
+      }
+    },
+    {
+      "name": "as2_density_20kg_tcp2kg",
+      "assumption": "Uniform 20kg-source-body hypothesis plus brochure-based 2kg TCP point-mass stress upper endpoint; no collision shape or rated full-extension guarantee.",
+      "parameters": {
+        "as2_mass_ratio": 1.1337868480725624,
+        "payload": {
+          "mass_kg": 2.0,
+          "model": "point",
+          "com_tcp_m": [
+            0,
+            0,
+            0
+          ]
+        }
+      }
+    },
+    {
+      "name": "as2_density_20kg_tcp2kg_legs095",
+      "assumption": "Same source density factor and 2kg point stress load, then leg isotropic scaling at constant density. Actual AS2 mass changes with s^3; not a 20kg body after geometry scaling.",
+      "parameters": {
+        "as2_mass_ratio": 1.1337868480725624,
+        "payload": {
+          "mass_kg": 2.0,
+          "model": "point",
+          "com_tcp_m": [
+            0,
+            0,
+            0
+          ]
+        },
+        "leg_scale": 0.95
+      }
+    },
+    {
+      "name": "as2_density_20kg_tcp2kg_legs105",
+      "assumption": "Same source density factor and 2kg point stress load, then leg isotropic scaling at constant density. Actual AS2 mass changes with s^3; not a 20kg body after geometry scaling.",
+      "parameters": {
+        "as2_mass_ratio": 1.1337868480725624,
+        "payload": {
+          "mass_kg": 2.0,
+          "model": "point",
+          "com_tcp_m": [
+            0,
+            0,
+            0
+          ]
+        },
+        "leg_scale": 1.05
+      }
+    },
+    {
+      "name": "as2_density_20kg_tcp2kg_arm110",
+      "assumption": "Uniform source AS2 density hypothesis plus all Piper positive-mass links at 1.1 density and 2kg TCP point stress load. Arm increase is an uncalibrated research endpoint.",
+      "parameters": {
+        "as2_mass_ratio": 1.1337868480725624,
+        "payload": {
+          "mass_kg": 2.0,
+          "model": "point",
+          "com_tcp_m": [
+            0,
+            0,
+            0
+          ]
+        },
+        "piper_mass_ratios": {
+          "piper_base_link": 1.1,
+          "piper_link1": 1.1,
+          "piper_link2": 1.1,
+          "piper_link3": 1.1,
+          "piper_link4": 1.1,
+          "piper_link5": 1.1,
+          "piper_link6": 1.1,
+          "piper_flange_link": 1.1,
+          "piper_gripper_base": 1.1,
+          "piper_gripper_link1": 1.1,
+          "piper_gripper_link2": 1.1
+        }
+      }
+    }
+  ]
+}

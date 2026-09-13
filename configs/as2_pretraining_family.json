@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "description": "Finite same-topology AS2/Piper-H target-aware pretraining research assumptions. Official EDU ~20 kg and Piper-H brochure 2 kg payload are context only; endpoints are not calibrated or guaranteed hardware limits. No new task, action or observation semantics.",
+  "variants": [
+    {
+      "name": "nominal",
+      "assumption": "Source nominal, not identified AS2 EDU hardware.",
+      "parameters": {}
+    },
+    {
+      "name": "base_density_110",
+      "assumption": "Research assumption: base density +10% at unchanged geometry, not allocation of the source-vs-EDU mass difference.",
+      "parameters": {
+        "base_mass_ratio": 1.1
+      }
+    },
+    {
+      "name": "legs_095",
+      "assumption": "Research assumption: all four leg segments isotropically scaled 0.95 at constant density; nominal angles unchanged.",
+      "parameters": {
+        "leg_scale": 0.95
+      }
+    },
+    {
+      "name": "legs_105",
+      "assumption": "Research assumption: all four leg segments isotropically scaled 1.05 at constant density; nominal angles unchanged.",
+      "parameters": {
+        "leg_scale": 1.05
+      }
+    },
+    {
+      "name": "arm_density_110",
+      "assumption": "Research assumption: each physical Piper link density +10%, including gripper, not hardware calibration.",
+      "parameters": {
+        "piper_mass_ratios": {
+          "piper_base_link": 1.1,
+          "piper_link1": 1.1,
+          "piper_link2": 1.1,
+          "piper_link3": 1.1,
+          "piper_link4": 1.1,
+          "piper_link5": 1.1,
+          "piper_link6": 1.1,
+          "piper_flange_link": 1.1,
+          "piper_gripper_base": 1.1,
+          "piper_gripper_link1": 1.1,
+          "piper_gripper_link2": 1.1
+        }
+      }
+    },
+    {
+      "name": "tcp_point_1kg",
+      "assumption": "Research probe: 1 kg point mass at nominal TCP; no payload collision geometry, grasp or rated full-extension claim.",
+      "parameters": {
+        "payload": {
+          "mass_kg": 1.0,
+          "model": "point",
+          "com_tcp_m": [
+            0,
+            0,
+            0
+          ]
+        }
+      }
+    }
+  ],
+  "parameter_ranges": {
+    "status": "Finite research endpoints for initial loading validation, not full target-domain coverage or calibration. Variables are not a Cartesian-product training distribution.",
+    "base_mass_ratio": {
+      "nominal": 1.0,
+      "selected": [
+        1.0,
+        1.1
+      ],
+      "base_mass_kg": [
+        8.8,
+        9.68
+      ],
+      "meaning": "Fixed geometry density; no allocation of missing EDU mass."
+    },
+    "leg_scale": {
+      "nominal": 1.0,
+      "selected": [
+        0.95,
+        1.0,
+        1.05
+      ],
+      "thigh_segment_m": [
+        0.2014,
+        0.212,
+        0.2226
+      ],
+      "calf_to_foot_m": [
+        0.202768,
+        0.21344,
+        0.224112
+      ],
+      "meaning": "Hip/thigh/calf/foot isotropic scaling, constant density, fixed torso hip anchors."
+    },
+    "piper_link_mass_ratios": {
+      "nominal": 1.0,
+      "selected": [
+        1.0,
+        1.1
+      ],
+      "piper_total_mass_kg": [
+        4.707,
+        5.1777
+      ],
+      "meaning": "All positive-mass Piper links including fixed gripper; individual ratios supplied by name."
+    },
+    "payload_mass_kg": {
+      "nominal": 0.0,
+      "selected": [
+        0.0,
+        1.0
+      ],
+      "meaning": "Point-mass probe at nominal TCP, not claimed 2kg rated full-extension load."
+    }
+  }
+}

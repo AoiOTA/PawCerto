@@ -5,6 +5,7 @@ from pathlib import Path
 import numpy as np
 import torch
 from pawcerto.methods.umi_on_legs import RobotState, UmiPolicy
+from pawcerto.artifacts import file_identity
 from .asset import ROOT
 from .runtime import Go2Arx5Mujoco, SimulationInstability
 from .contacts import contact_snapshot, FORCE_THRESHOLD_N
@@ -21,12 +22,13 @@ def robot_state(state):
                       batch(pose), torch.tensor([state['time']], dtype=torch.float32))
 
 
-def evaluate(checkpoint_dir, trajectory_path, seconds=17., seed=0, *, policy=None, positions=None, rotations=None, raw_output=None, substep_trace=None):
+def evaluate(checkpoint_dir, trajectory_path, seconds=17., seed=0, *, policy=None, positions=None, rotations=None, raw_output=None, substep_trace=None, model_path=None):
     torch.set_num_threads(1)
     policy = UmiPolicy(checkpoint_dir) if policy is None else policy
     source = Path(checkpoint_dir)
     config_dir = source.parent if source.is_file() else source
-    sim = Go2Arx5Mujoco(config_dir / 'config.json')
+    sim = Go2Arx5Mujoco(config_dir / 'config.json', model_path=model_path)
+    model_identity = file_identity(model_path or sim.binding['mujoco_path'])
     if positions is None:
         positions, rotations = policy.trajectories(trajectory_path).sample(1, seed)
     observer = policy.observer(positions, rotations)
@@ -91,6 +93,7 @@ def evaluate(checkpoint_dir, trajectory_path, seconds=17., seed=0, *, policy=Non
                                 'joint_pos:36:54', 'joint_vel:54:72', 'raw_action:72:90',
                                 'last_substep_torque:90:108', 'FR_FL_RR_RL_force_z:108:112']))
     return {'checkpoint': str(checkpoint_dir), 'trajectory': str(trajectory_path), 'seed': seed,
+            'mujoco_asset': model_identity,
             'joint_names': list(sim.joint_names), 'seconds': float(values[-1,0]),
             'requested_seconds': seconds, 'completion_status': 'invalid' if failure else 'complete',
             'metrics_scope': 'pre_failure_prefix' if failure else 'complete_episode',
@@ -185,7 +188,7 @@ def summarize_cases(results, checkpoint_dir, trajectory_path, seconds, seed):
     return summary
 
 
-def evaluate_batch(checkpoint_dir, trajectory_path, output_dir, cases=16, seconds=17., seed=0):
+def evaluate_batch(checkpoint_dir, trajectory_path, output_dir, cases=16, seconds=17., seed=0, *, model_path=None):
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     policy = UmiPolicy(checkpoint_dir)
@@ -194,12 +197,14 @@ def evaluate_batch(checkpoint_dir, trajectory_path, output_dir, cases=16, second
     results = []
     for index in range(cases):
         result = evaluate(checkpoint_dir, trajectory_path, seconds, seed, policy=policy,
+                          model_path=model_path,
                           positions=positions[index:index+1], rotations=rotations[index:index+1],
                           raw_output=output_dir / f'case_{index:02d}.npz')
         result['case_index'] = index
         (output_dir / f'case_{index:02d}.json').write_text(json.dumps(result, indent=2))
         results.append({key: value for key, value in result.items() if key not in ('records', 'nonfoot_contact_records', 'foot_or_finger_only_contact_records', 'ground_supported_feet_records')})
     summary = summarize_cases(results, checkpoint_dir, trajectory_path, seconds, seed)
+    summary['mujoco_asset'] = results[0]['mujoco_asset']
     (output_dir / 'summary.json').write_text(json.dumps(summary, indent=2))
     return summary
 
@@ -212,13 +217,14 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--output', type=Path, default=ROOT / 'outputs/mujoco/evaluation.json')
     parser.add_argument('--cases', type=int, default=1, help='Batch draws once with sample(cases, seed); --output is then a directory')
+    parser.add_argument('--model-path', type=Path, help='Explicit compatible robot model for a frozen-policy asset condition')
     args = parser.parse_args()
     if args.cases == 1:
-        result = evaluate(args.checkpoint, args.trajectory, args.seconds, args.seed)
+        result = evaluate(args.checkpoint, args.trajectory, args.seconds, args.seed, model_path=args.model_path)
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(result, indent=2))
     else:
-        result = evaluate_batch(args.checkpoint, args.trajectory, args.output, args.cases, args.seconds, args.seed)
+        result = evaluate_batch(args.checkpoint, args.trajectory, args.output, args.cases, args.seconds, args.seed, model_path=args.model_path)
     print(json.dumps({key: value for key, value in result.items() if key not in ('records', 'case_results', 'nonfoot_contact_records', 'foot_or_finger_only_contact_records', 'ground_supported_feet_records')}, indent=2))
 
     if result.get("completion_status") in ("invalid", "incomplete"):

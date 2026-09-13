@@ -40,7 +40,6 @@ def main():
         import numpy as np
         import torch
         from pawcerto.isaac.runtime import DEFAULT_USD, DEFAULT_URDF, Go2Arx5Isaac
-        from pawcerto.artifacts import file_identity
         from pawcerto.methods.umi_on_legs.training import UmiTrainer, load_config
         from pawcerto.methods.umi_on_legs.training.isaac_env import UmiIsaacTrainingEnv
         from pawcerto.methods.umi_on_legs.training.semantics import runtime_contract,require_resume_contract
@@ -57,16 +56,10 @@ def main():
         if source_checkpoint is not None:
             require_same_robot(config,source_checkpoint.get('config',{}))
         source_asset=(source_checkpoint.get('config',{}).get('pawcerto_asset') if source_checkpoint is not None else config.get('pawcerto_asset'))
-        usd_path=Path(args.usd_path or (source_asset or {}).get('usd_path') or binding['usd_path'])
-        if usd_path.suffix == '.txt':
-            usd_path=Path(usd_path.read_text().strip())
-        usd_path=usd_path.resolve()
-        asset_identity=file_identity(usd_path)
-        urdf_path=Path(args.urdf_path or (source_asset or {}).get('urdf_path') or binding['urdf_path'])
-        urdf_identity=file_identity(urdf_path)
-        config['pawcerto_asset']=dict(usd_path=asset_identity['path'],
-                                    usd_sha256=asset_identity['sha256'],
-                                    urdf_path=urdf_identity['path'],urdf_sha256=urdf_identity['sha256'])
+        from pawcerto.methods.umi_on_legs.pretraining import resolve_training_asset
+        config['pawcerto_asset'] = resolve_training_asset(config, source_asset, args.usd_path, args.urdf_path)
+        usd_path = Path(config['pawcerto_asset']['usd_path'])
+        urdf_path = Path(config['pawcerto_asset']['urdf_path'])
         if config['env']['tasks']['reaching']['sequence_sampler'].get('trajectory_selection') and not args.split_manifest:
             raise ValueError('Saved split config requires --split-manifest; refusing silent full-pool training')
         from pawcerto.methods.umi_on_legs.data_split import configure_selection
@@ -83,6 +76,8 @@ def main():
             source_runtime=source_checkpoint.get('config',{}).get('pawcerto_runtime')
             if args.resume:
                 require_resume_contract(source_runtime,config['pawcerto_runtime'])
+                from pawcerto.methods.umi_on_legs.pretraining import require_resume_family
+                require_resume_family(source_checkpoint.get('config', {}), config)
             del source_checkpoint
         config['training_initialization']=dict(
             mode='resume' if args.resume else 'weights' if args.weights else 'random',

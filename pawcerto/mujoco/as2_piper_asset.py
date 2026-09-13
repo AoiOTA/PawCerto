@@ -147,7 +147,7 @@ def urdf_fk(root, positions, base_xyz, base_quat):
     return poses
 
 
-def validate(model, root, config):
+def validate(model, root, config, *, static_only=False):
     """Check reachable model against URDF FK, per-link inertials and joint limits."""
     import mujoco
     names = config['controlled_joint_order']
@@ -205,7 +205,10 @@ def validate(model, root, config):
         data.qpos[3:7] = config['default_base_quat_wxyz']
         for name, value in zip(names, values):
             data.qpos[model.joint(name).qposadr[0]] = value
-        mujoco.mj_forward(model, data)
+        if static_only:
+            mujoco.mj_kinematics(model, data)
+        else:
+            mujoco.mj_forward(model, data)
         independent = urdf_fk(root, dict(zip(names, values)), data.qpos[:3], data.qpos[3:7])
         for name, pose in independent.items():
             if name == 'world':
@@ -218,6 +221,36 @@ def validate(model, root, config):
         np.testing.assert_allclose(data.site('tcp').xmat.reshape(3, 3), tcp[:3, :3], atol=1e-5)
     if fk_error > 1e-5 or orientation_error > 1e-5:
         raise ValueError(f'FK mismatch: {fk_error}, {orientation_error}')
+    if static_only:
+        mujoco.mj_resetDataKeyframe(model, data, 0)
+        mujoco.mj_kinematics(model, data)
+        ground = model.geom('ground')
+        if ground.type[0] != mujoco.mjtGeom.mjGEOM_PLANE or model.opt.integrator != mujoco.mjtIntegrator.mjINT_IMPLICITFAST:
+            raise ValueError('Expected original ground plane and implicitfast integrator')
+        np.testing.assert_allclose(model.opt.timestep, config['timestep'], atol=0, rtol=0)
+        np.testing.assert_allclose(ground.pos, [0, 0, 0], atol=0, rtol=0)
+        np.testing.assert_allclose(model.actuator_gear[:, 0], 1, atol=0, rtol=0)
+        np.testing.assert_allclose(model.actuator_gear[:, 1:], 0, atol=0, rtol=0)
+        independent = urdf_fk(root, dict(zip(names, config['default_joint_positions'])), data.qpos[:3], data.qpos[3:7])
+        expected_com = np.zeros(3)
+        for link in root.findall('link'):
+            inertial = link.find('inertial')
+            if inertial is None:
+                continue
+            pose = independent[link.get('name')]
+            local_com = np.fromstring(inertial.find('origin').get('xyz', '0 0 0'), sep=' ')
+            expected_com += float(inertial.find('mass').get('value')) * (pose[:3, :3] @ local_com + pose[:3, 3])
+        expected_com /= mass
+        actual_com = (model.body_mass[:, None] * data.xipos).sum(0) / mass
+        np.testing.assert_allclose(actual_com, expected_com, atol=1e-6, rtol=0)
+        return dict(evidence='Static model compilation, source inertials, three-pose FK, ground and motor declarations. No mj_forward, integration, gravity probe or policy evaluation.',
+                    mujoco_version=mujoco.__version__, nq=model.nq, nv=model.nv, nu=model.nu,
+                    total_mass_kg=mass, max_inertia_tensor_error=inertia_error,
+                    max_fk_position_error_m=fk_error, max_fk_rotation_matrix_error=orientation_error,
+                    default_tcp_world_xyz=data.site('tcp').xpos.tolist(), default_com_world_xyz=actual_com.tolist(),
+                    source_com_world_xyz=expected_com.tolist(), source_joint_limits=limits,
+                    controlled_joint_order=names, ground=dict(name='ground', type='plane', position=ground.pos.tolist()),
+                    timestep_s=model.opt.timestep, integrator='implicitfast', physics_steps=0)
     mujoco.mj_resetDataKeyframe(model, data, 0)
     mujoco.mj_forward(model, data)
     dense = np.zeros((model.nv, model.nv))
@@ -267,11 +300,11 @@ def validate(model, root, config):
     return report
 
 
-def build(output_dir, source_dir=SOURCES, config_path=CONFIG):
+def build(output_dir, source_dir=SOURCES, config_path=CONFIG, *, source_root=None, static_only=False):
     import mujoco
     output_dir, source_dir = Path(output_dir).resolve(), Path(source_dir).resolve()
     config = json.loads(Path(config_path).read_text())
-    root = assemble(source_dir, config)
+    root = assemble(source_dir, config) if source_root is None else copy.deepcopy(source_root)
     output_dir.mkdir(parents=True, exist_ok=True)
     ET.indent(root)
     urdf = ET.tostring(root, encoding='unicode')
@@ -280,6 +313,19 @@ def build(output_dir, source_dir=SOURCES, config_path=CONFIG):
         intermediate = Path(temp) / 'imported.xml'
         mujoco.mj_saveLastXML(str(intermediate), imported)
         model_root = ET.parse(intermediate).getroot()
+    if source_root is not None:
+        # mj_saveLastXML rounds physical values to six significant digits.
+        # Research density/payload variants need their imported inertials intact;
+        # keep the historical default source construction byte behavior unchanged.
+        for element in model_root.findall('.//body'):
+            inertial = element.find('inertial')
+            if inertial is None:
+                continue
+            original = imported.body(element.get('name'))
+            inertial.set('mass', str(float(original.mass[0])))
+            inertial.set('pos', numbers(original.ipos))
+            inertial.set('quat', numbers(original.iquat))
+            inertial.set('diaginertia', numbers(original.inertia))
     option = model_root.find('option')
     if option is None:
         option = ET.SubElement(model_root, 'option')
@@ -305,24 +351,27 @@ def build(output_dir, source_dir=SOURCES, config_path=CONFIG):
     ET.indent(model_root)
     xml = ET.tostring(model_root, encoding='unicode')
     model = mujoco.MjModel.from_xml_string(xml)
-    report = validate(model, root, config)
-    source_as2 = ET.parse(source_dir / config['as2_urdf']).getroot()
-    source_arm = ET.parse(source_dir / config['piper_urdf']).getroot()
-    alternate = ET.parse(source_dir / 'unitree_as2_dynamics/unitree_robots/as2/as2.xml')
-    report['component_masses_kg'] = {
-        'as2_urdf_selected': sum(float(m.get('value')) for m in source_as2.findall('.//inertial/mass')),
-        'piper_h_bare_urdf_selected': sum(float(m.get('value')) for m in source_arm.findall('.//inertial/mass')),
-        'as2_vendor_mjcf_not_selected': sum(float(m.get('mass')) for m in alternate.findall('.//body/inertial'))}
-    if 'gripper' in config:
-        gripper = ET.parse(source_dir / config['gripper']['source_xacro']).getroot()
-        report['component_masses_kg']['stock_gripper_with_flange_selected'] = sum(
-            float(m.get('value')) for m in gripper.findall('.//inertial/mass'))
-        report['frozen_gripper_source_joints'] = {
-            j.get('name'): {'limit': dict(j.find('limit').attrib),
-                           'mimic': dict(j.find('mimic').attrib) if j.find('mimic') is not None else None}
-            for j in gripper.findall('joint') if j.get('type') == 'prismatic'}
+    report = validate(model, root, config, static_only=static_only)
+    if source_root is None:
+        source_as2 = ET.parse(source_dir / config['as2_urdf']).getroot()
+        source_arm = ET.parse(source_dir / config['piper_urdf']).getroot()
+        alternate = ET.parse(source_dir / 'unitree_as2_dynamics/unitree_robots/as2/as2.xml')
+        report['component_masses_kg'] = {
+            'as2_urdf_selected': sum(float(m.get('value')) for m in source_as2.findall('.//inertial/mass')),
+            'piper_h_bare_urdf_selected': sum(float(m.get('value')) for m in source_arm.findall('.//inertial/mass')),
+            'as2_vendor_mjcf_not_selected': sum(float(m.get('mass')) for m in alternate.findall('.//body/inertial'))}
+        if 'gripper' in config:
+            gripper = ET.parse(source_dir / config['gripper']['source_xacro']).getroot()
+            report['component_masses_kg']['stock_gripper_with_flange_selected'] = sum(
+                float(m.get('value')) for m in gripper.findall('.//inertial/mass'))
+            report['frozen_gripper_source_joints'] = {
+                j.get('name'): {'limit': dict(j.find('limit').attrib),
+                               'mimic': dict(j.find('mimic').attrib) if j.find('mimic') is not None else None}
+                for j in gripper.findall('joint') if j.get('type') == 'prismatic'}
+        report['source_provenance'] = verify_sources(source_dir)
+    else:
+        report['source_provenance'] = {'mode': 'caller supplied AS2 source tree', 'input_tree_sha256': hashlib.sha256(ET.tostring(source_root)).hexdigest()}
     report['config'] = config
-    report['source_provenance'] = verify_sources(source_dir)
     (output_dir / 'robot.urdf').write_text(urdf + '\n')
     (output_dir / 'robot.xml').write_text(xml + '\n')
     report['artifact_sha256'] = {name: hashlib.sha256((output_dir / name).read_bytes()).hexdigest() for name in ('robot.urdf', 'robot.xml')}

@@ -38,8 +38,10 @@ conversion](as2-piper-isaac.md), then use the [learning/evaluation protocol](as2
 That protocol specifies the actual run's model 0/500/4000 fixed16 comparisons,
 final paired Lab evaluation and independent export consumer. The [completed result](as2-umi-learning-result.md)
 records improved Lab tracking with inversions, failed MuJoCo transfer and failed
-export consumption. The one-candidate stop boundary is reached; the commands
-do not authorize another AS2 experiment or parameter change. Run scripts from
+export consumption. That one-candidate run is finished. The subsequent
+[target-aware pretraining family](as2-pretraining-family.md) now has generated
+assets and actual Lab/MuJoCo consumption evidence; new learning has not started.
+Its proposed learning budget is separate from the completed candidate. Run scripts from
 the source checkout: a wheel does not bundle the scripts, vendor inputs or local
 experiment outputs. Coordinate simulator work with the assigned GPU operator;
 these examples do not authorize duplicate training services.

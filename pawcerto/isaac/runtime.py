@@ -75,6 +75,8 @@ class Go2Arx5Isaac:
         self.device = device
         self.joint_names = list(joint_names)
         self.training = training
+        from pawcerto.methods.umi_on_legs.pretraining import training_family
+        self.asset_family = training_family(config, training)
         self.ground_contact_diagnostics = ground_contact_diagnostics
         usd_path = Path(usd_path or config.get('pawcerto_asset', {}).get('usd_path') or self.binding['usd_path'])
         if usd_path.suffix == '.txt':
@@ -129,6 +131,20 @@ class Go2Arx5Isaac:
             # Keep the validated force-application branch across Lab defaults.
             physics=PhysxCfg(enable_external_forces_every_iteration=False)))
         scene_cfg = SceneCfg(num_envs=num_envs, env_spacing=4.)
+        if self.asset_family is not None:
+            # Keep each variant's geometry and inertials. All variants retain
+            # the same AS2 body/joint/shape interface and source physics callback.
+            import copy
+            variants = []
+            for entry in self.asset_family['variants']:
+                spawn = copy.deepcopy(scene_cfg.robot.spawn)
+                spawn.usd_path = entry['usd']['path']
+                variants.append(spawn)
+            scene_cfg.robot.spawn = sim_utils.MultiAssetSpawnerCfg(
+                assets_cfg=variants, activate_contact_sensors=True, random_choice=False)
+            scene_cfg.replicate_physics = False
+            from isaaclab.cloner.cloner_strategies import sequential
+            scene_cfg.clone_cfg.clone_strategy = sequential
         from isaaclab.sensors import ContactSensorCfg
         root_body = self.binding['root_body']
         paths = {root_body: '{ENV_REGEX_NS}/Robot/Geometry/' + root_body}
@@ -242,14 +258,16 @@ class Go2Arx5Isaac:
             return torch.rand(shape, device=self.device) * (high-low) + low
         body_ids = [self.body_names.index(name) for name in rand['randomize_rigid_body_masses']]
         original_mass = self.robot.data.body_mass.torch[:, body_ids].clone()
-        mass = (original_mass + uniform(original_mass.shape, rand['added_mass_range'])).clamp_min(.01)
-        inertia = self.robot.data.body_inertia.torch[:, body_ids].clone()
-        self.robot.set_masses_index(masses=mass, body_ids=body_ids)
-        self.robot.set_inertias_index(inertias=inertia * (mass/original_mass)[..., None], body_ids=body_ids)
+        mass = original_mass
         com_ids = [self.body_names.index(name) for name in rand['randomize_rigid_body_com']]
         com = self.robot.data.body_com_pose_b.torch[:, com_ids].clone()
-        com[..., :3] += uniform((self.num_envs, len(com_ids), 3), rand['rigid_body_com_range']['data'])
-        self.robot.set_coms_index(coms=com, body_ids=com_ids)
+        if self.asset_family is None:
+            mass = (original_mass + uniform(original_mass.shape, rand['added_mass_range'])).clamp_min(.01)
+            inertia = self.robot.data.body_inertia.torch[:, body_ids].clone()
+            self.robot.set_masses_index(masses=mass, body_ids=body_ids)
+            self.robot.set_inertias_index(inertias=inertia * (mass/original_mass)[..., None], body_ids=body_ids)
+            com[..., :3] += uniform((self.num_envs, len(com_ids), 3), rand['rigid_body_com_range']['data'])
+            self.robot.set_coms_index(coms=com, body_ids=com_ids)
         friction = uniform((self.num_envs, 18), rand['dof_friction_range'])
         damping = uniform((self.num_envs, 18), rand['dof_damping_range'])
         # Gym's dimensionless coefficient uses PhysX's legacy joint-friction

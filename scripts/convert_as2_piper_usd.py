@@ -67,7 +67,7 @@ def restore_and_validate(stage, tree, manifest):
     import numpy as np
     from scipy.spatial.transform import Rotation
     from pxr import Gf, Usd, UsdGeom, UsdPhysics
-    from pawcerto.mujoco.as2_piper_asset import assemble, urdf_fk
+    from pawcerto.mujoco.as2_piper_asset import urdf_fk
 
     def rotation(quat):
         return Rotation.from_quat([*quat.GetImaginary(), quat.GetReal()]).as_matrix()
@@ -108,7 +108,8 @@ def restore_and_validate(stage, tree, manifest):
                         'before_com_error': float(np.max(abs(np.array(before_com)-xyz))) if np.isfinite(before_com).all() else None,
                         'before_tensor_error': float(np.max(abs(before-tensor))),
                         'after_tensor_error': float(np.max(abs(after-tensor)))})
-    source = assemble()
+    import xml.etree.ElementTree as ET
+    source = ET.parse(Path(manifest['merged_urdf']).with_name('source.urdf')).getroot()
     poses = urdf_fk(source, dict.fromkeys(manifest['controlled_joint_order'], 0.), [0, 0, 0], [1, 0, 0, 0])
     cache = UsdGeom.XformCache()
     for name, prim in bodies.items():
@@ -245,6 +246,31 @@ def restore_and_validate(stage, tree, manifest):
             'evidence': 'USD source inertias and zero-pose FK; revolute/fixed constraints, source limits and zero gains; primitive collision dimensions/transforms and mesh instancing. No simulation/training acceptance.'}
 
 
+def convert_prepared(output, contact_offset=.01, rest_offset=0.):
+    """Consume one prepared source/merged URDF pair with the official converter."""
+    import xml.etree.ElementTree as ET
+    from isaaclab.sim.converters import UrdfConverter, UrdfConverterCfg
+    from pxr import Usd
+    output = Path(output).resolve()
+    tree = ET.parse(output / 'merged.urdf')
+    manifest = json.loads((output / 'preparation.json').read_text())
+    converter = UrdfConverter(UrdfConverterCfg(asset_path=manifest['merged_urdf'],
+        usd_dir=str(output), usd_file_name='robot.usd', force_usd_conversion=True,
+        fix_base=False, merge_fixed_joints=False, self_collision=True,
+        collision_type='Convex Hull', replace_cylinders_with_capsules=False,
+        joint_drive=UrdfConverterCfg.JointDriveCfg(target_type='none')))
+    stage = Usd.Stage.Open(converter.usd_path)
+    author_source_physx_limits(stage, tree)
+    offsets = author_shared_collision_offsets(stage, output, contact_offset, rest_offset)
+    report = restore_and_validate(stage, tree, manifest)
+    report['collision_offsets'] = offsets
+    report['usd_path'] = converter.usd_path
+    stage.GetRootLayer().Save()
+    (output / 'conversion-validation.json').write_text(json.dumps(report, indent=2, allow_nan=False) + '\n')
+    (output / 'usd_path.txt').write_text(converter.usd_path + '\n')
+    return report
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, default=ROOT / 'reference/isaac/as2_piper')
@@ -252,6 +278,8 @@ def main():
     mode.add_argument('--prepare-only', action='store_true')
     mode.add_argument('--validate-only', action='store_true')
     mode.add_argument('--prepare-collision-offsets-only', action='store_true')
+    mode.add_argument('--convert-prepared', action='store_true',
+                      help='Convert existing source.urdf, merged.urdf and preparation.json in --output')
     parser.add_argument('--contact-offset', type=float, default=.01)
     parser.add_argument('--rest-offset', type=float, default=0.)
     if '--prepare-collision-offsets-only' in sys.argv:
@@ -284,26 +312,12 @@ def main():
     from isaaclab.app import AppLauncher
     AppLauncher.add_app_launcher_args(parser)
     args = parser.parse_args()
-    tree, manifest = prepare_urdf(args.output)
+    if not args.convert_prepared:
+        prepare_urdf(args.output)
     launcher = AppLauncher(args)
     try:
-        from isaaclab.sim.converters import UrdfConverter, UrdfConverterCfg
-        from pxr import Usd
-        converter = UrdfConverter(UrdfConverterCfg(asset_path=manifest['merged_urdf'],
-            usd_dir=str(args.output.resolve()), usd_file_name='robot.usd', force_usd_conversion=True,
-            fix_base=False, merge_fixed_joints=False, self_collision=True,
-            collision_type='Convex Hull', replace_cylinders_with_capsules=False,
-            joint_drive=UrdfConverterCfg.JointDriveCfg(target_type='none')))
-        stage = Usd.Stage.Open(converter.usd_path)
-        author_source_physx_limits(stage, tree)
-        offsets = author_shared_collision_offsets(stage, args.output, args.contact_offset, args.rest_offset)
-        report = restore_and_validate(stage, tree, manifest)
-        report['collision_offsets'] = offsets
-        report['usd_path'] = converter.usd_path
-        stage.GetRootLayer().Save()
-        (args.output / 'conversion-validation.json').write_text(json.dumps(report, indent=2, allow_nan=False) + '\n')
-        (args.output / 'usd_path.txt').write_text(converter.usd_path + '\n')
-        print('AS2_PIPER_USD', converter.usd_path, flush=True)
+        report = convert_prepared(args.output, args.contact_offset, args.rest_offset)
+        print('AS2_PIPER_USD', report['usd_path'], flush=True)
     except BaseException:
         import traceback
         traceback.print_exc()
