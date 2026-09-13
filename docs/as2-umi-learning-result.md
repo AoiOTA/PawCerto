@@ -71,3 +71,5 @@ A known declared constraint difference remains: Lab configures source URDF joint
 The final checkpoint SHA-256 is `1b0f267d6dd7ef59f025a484d1be663ad149c032d4dfc43708a1b9ed1914d298`; the frozen target SHA-256 is `d118cdc555bcfa661a0afa566b2a838f1513416e580109efa93fcd48eb1337d5`. Training log/config/checkpoints are in `runs/as2_umi_seed0_4096_4000`; attempt logs, source/asset snapshots and the original OOM record are in `outputs/as2-umi-learning-execution-20260913`. The source-geometry repair was separately checked against the prior 3-second control trace with identical recorded arrays. This remains a supplied-training-pool research result, with nominal uncalibrated AS2/Piper model assumptions and no hardware or held-out acceptance.
 
 The declared one-candidate stop boundary is reached. No further training or simulation was launched to repair these final outcomes. Paths under `runs/` and `outputs/` refer to local evidence and are not asserted to be bundled in a public source checkout.
+
+后续有限诊断、CPU参数/伸展审查及面向AS2的预训练方案见 [下一步迁移方案](as2-umi-migration-next.md)；它不改变本次4000-update负面结果或授权新的训练。
