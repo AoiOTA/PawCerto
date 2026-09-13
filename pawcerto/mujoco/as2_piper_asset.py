@@ -44,11 +44,13 @@ def mount_plate_properties(plate):
     return mass, com, inertia
 
 
-def merge_mount_plate_inertia(link, plate, *, merged_base_ratio=None):
+def merge_mount_plate_inertia(link, plate, *, merged_base_ratio=None, original_base_com_offset_m=None):
     """Add the plate, or scale an already merged original base while fixing plate mass.
 
     First/second moments about the link origin are additive. Subtracting the
     known plate moments before scaling avoids scaling its density with AS2.
+    A local COM offset translates only the original base mass distribution,
+    retaining its central tensor and the fixed plate's complete inertial state.
     """
     added, added_com, added_tensor = mount_plate_properties(plate)
     inertial = link.find('inertial')
@@ -64,13 +66,26 @@ def merge_mount_plate_inertia(link, plate, *, merged_base_ratio=None):
     first = mass * com
     second = tensor + parallel(mass, com)
     plate_second = added_tensor + parallel(added, added_com)
+    if original_base_com_offset_m is not None:
+        offset = np.asarray(original_base_com_offset_m, dtype=float)
+        if offset.shape != (3,) or not np.isfinite(offset).all() or merged_base_ratio is None:
+            raise ValueError('Original base COM offset requires a finite 3-vector and already merged base')
     if merged_base_ratio is not None:
         ratio = float(merged_base_ratio)
         if not np.isfinite(ratio) or ratio <= 0 or mass <= added:
             raise ValueError('Expected positive original base mass and density ratio')
-        mass = (mass - added) * ratio
-        first = (first - added * added_com) * ratio
-        second = (second - plate_second) * ratio
+        original_mass = mass - added
+        first = first - added * added_com
+        second = second - plate_second
+        if original_base_com_offset_m is not None:
+            original_com = first / original_mass
+            central = second - parallel(original_mass, original_com)
+            shifted_com = original_com + offset
+            first = original_mass * shifted_com
+            second = central + parallel(original_mass, shifted_com)
+        mass = original_mass * ratio
+        first *= ratio
+        second *= ratio
     mass += added
     com = (first + added * added_com) / mass
     tensor = second + plate_second - parallel(mass, com)

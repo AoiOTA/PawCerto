@@ -1,0 +1,1327 @@
+{
+  "schema_version": 1,
+  "description": "AS2/Piper-H target-centred demo-pretraining candidate distribution:6 regression parameter endpoints plus16 paired joint samples. All intervals are uncalibrated research hypotheses, not manufacturer tolerances or hardware load guarantees. Actual demo state/load visitation and learning are unverified.",
+  "parameter_ranges": {
+    "status": "Finite 22-asset research design, not continuous or per-reset sampling. No hardware identification or learning claim.",
+    "generation": {
+      "seed": 20260913,
+      "engine": "scipy.stats.qmc.Sobol(scramble=True, d=28).random_base2(3)",
+      "scipy_version": "1.18.1",
+      "rule": "Each of8 draws u is followed by1-u; first6 original parameters retained unchanged.",
+      "dimension_order": [
+        "base_mass_ratio",
+        "leg_scale",
+        "common_piper_mass_ratio",
+        "payload_mass_kg",
+        "base_com_x",
+        "base_com_y",
+        "base_com_z",
+        "piper_link1_com_x",
+        "piper_link1_com_y",
+        "piper_link1_com_z",
+        "piper_link2_com_x",
+        "piper_link2_com_y",
+        "piper_link2_com_z",
+        "piper_link3_com_x",
+        "piper_link3_com_y",
+        "piper_link3_com_z",
+        "piper_link4_com_x",
+        "piper_link4_com_y",
+        "piper_link4_com_z",
+        "piper_link5_com_x",
+        "piper_link5_com_y",
+        "piper_link5_com_z",
+        "piper_link6_com_x",
+        "piper_link6_com_y",
+        "piper_link6_com_z",
+        "payload_com_x",
+        "payload_com_y",
+        "payload_com_z"
+      ]
+    },
+    "source": {
+      "regression_config": "configs/as2_pretraining_target_domain.json",
+      "regression_sha256": "0e928b926c159ce8bfc09db131f42667e421719870a5e535052cf75ce38b8eb6",
+      "required_assembly": "outputs/as2-rail-mounted-candidate-20260913/assembly.json",
+      "assembly_sha256": "b8698fec8f323ed524110e3c8ea7d546bed806dfd96681d6dbf9f68d71f40aee"
+    },
+    "as2_mass_ratio": {
+      "centre": 1.1337868480725624,
+      "lower": 1.1337868480725624,
+      "upper": 1.1337868480725624,
+      "meaning": "Joint draws use20kg original-AS2 density anchor; six regression endpoints preserved."
+    },
+    "base_mass_ratio": {
+      "centre": 1,
+      "lower": 0.9,
+      "upper": 1.1,
+      "meaning": "Original torso only, fixed plate excluded; research prior."
+    },
+    "leg_scale": {
+      "centre": 1,
+      "lower": 0.95,
+      "upper": 1.05,
+      "meaning": "All four leg links isotropic, mass s^3/inertia s^5; not independent segment length."
+    },
+    "piper_mass_ratio": {
+      "centre": 1,
+      "lower": 0.9,
+      "upper": 1.1,
+      "meaning": "Common factor for original Piper links including stock gripper, payload excluded."
+    },
+    "base_com_offset_m": {
+      "centre": [
+        0,
+        0,
+        0
+      ],
+      "lower": [
+        -0.01,
+        -0.01,
+        -0.01
+      ],
+      "upper": [
+        0.01,
+        0.01,
+        0.01
+      ]
+    },
+    "arm_link_com_offset_m": {
+      "links": [
+        "piper_link1",
+        "piper_link2",
+        "piper_link3",
+        "piper_link4",
+        "piper_link5",
+        "piper_link6"
+      ],
+      "centre": [
+        0,
+        0,
+        0
+      ],
+      "lower": [
+        -0.005,
+        -0.005,
+        -0.005
+      ],
+      "upper": [
+        0.005,
+        0.005,
+        0.005
+      ]
+    },
+    "payload": {
+      "mass_kg": {
+        "centre": 1,
+        "lower": 0,
+        "upper": 2
+      },
+      "com_tcp_m": {
+        "centre": [
+          0,
+          0,
+          0
+        ],
+        "lower": [
+          -0.02,
+          -0.02,
+          -0.05
+        ],
+        "upper": [
+          0.02,
+          0.02,
+          0.05
+        ]
+      },
+      "model": "point"
+    },
+    "fixed_mount": {
+      "plate_kg": 0.46656,
+      "additional_rail_mass_kg": 0,
+      "meaning": "Plate geometry/COM/inertia fixed. Source rail mass inclusion unknown; no duplicate rail mass."
+    },
+    "actual_mass_policy": "Do not reuse historical expected totals. Built manifest per-link/total masses derive from actual new assembly and variants."
+  },
+  "variants": [
+    {
+      "name": "nominal",
+      "assumption": "Unchanged source nominal AS2 17.640kg + Piper assembly 4.707kg; not identified EDU hardware. New rail-mounted assembly with fixed0.46656kg plate; same original parameter endpoint, not the old massless-mount asset.",
+      "parameters": {}
+    },
+    {
+      "name": "as2_density_20kg",
+      "assumption": "Uniform density scaling of every positive-mass non-Piper link maps source AS2 17.640kg to 20kg at nominal geometry. Research allocation, not measured battery or component masses. New rail-mounted assembly with fixed0.46656kg plate; same original parameter endpoint, not the old massless-mount asset.",
+      "parameters": {
+        "as2_mass_ratio": 1.1337868480725624
+      }
+    },
+    {
+      "name": "as2_density_20kg_tcp2kg",
+      "assumption": "Uniform 20kg-source-body hypothesis plus brochure-based 2kg TCP point-mass stress upper endpoint; no collision shape or rated full-extension guarantee. New rail-mounted assembly with fixed0.46656kg plate; same original parameter endpoint, not the old massless-mount asset.",
+      "parameters": {
+        "as2_mass_ratio": 1.1337868480725624,
+        "payload": {
+          "mass_kg": 2.0,
+          "model": "point",
+          "com_tcp_m": [
+            0,
+            0,
+            0
+          ]
+        }
+      }
+    },
+    {
+      "name": "as2_density_20kg_tcp2kg_legs095",
+      "assumption": "Same source density factor and 2kg point stress load, then leg isotropic scaling at constant density. Actual AS2 mass changes with s^3; not a 20kg body after geometry scaling. New rail-mounted assembly with fixed0.46656kg plate; same original parameter endpoint, not the old massless-mount asset.",
+      "parameters": {
+        "as2_mass_ratio": 1.1337868480725624,
+        "payload": {
+          "mass_kg": 2.0,
+          "model": "point",
+          "com_tcp_m": [
+            0,
+            0,
+            0
+          ]
+        },
+        "leg_scale": 0.95
+      }
+    },
+    {
+      "name": "as2_density_20kg_tcp2kg_legs105",
+      "assumption": "Same source density factor and 2kg point stress load, then leg isotropic scaling at constant density. Actual AS2 mass changes with s^3; not a 20kg body after geometry scaling. New rail-mounted assembly with fixed0.46656kg plate; same original parameter endpoint, not the old massless-mount asset.",
+      "parameters": {
+        "as2_mass_ratio": 1.1337868480725624,
+        "payload": {
+          "mass_kg": 2.0,
+          "model": "point",
+          "com_tcp_m": [
+            0,
+            0,
+            0
+          ]
+        },
+        "leg_scale": 1.05
+      }
+    },
+    {
+      "name": "as2_density_20kg_tcp2kg_arm110",
+      "assumption": "Uniform source AS2 density hypothesis plus all Piper positive-mass links at 1.1 density and 2kg TCP point stress load. Arm increase is an uncalibrated research endpoint. New rail-mounted assembly with fixed0.46656kg plate; same original parameter endpoint, not the old massless-mount asset.",
+      "parameters": {
+        "as2_mass_ratio": 1.1337868480725624,
+        "payload": {
+          "mass_kg": 2.0,
+          "model": "point",
+          "com_tcp_m": [
+            0,
+            0,
+            0
+          ]
+        },
+        "piper_mass_ratios": {
+          "piper_base_link": 1.1,
+          "piper_link1": 1.1,
+          "piper_link2": 1.1,
+          "piper_link3": 1.1,
+          "piper_link4": 1.1,
+          "piper_link5": 1.1,
+          "piper_link6": 1.1,
+          "piper_flange_link": 1.1,
+          "piper_gripper_base": 1.1,
+          "piper_gripper_link1": 1.1,
+          "piper_gripper_link2": 1.1
+        }
+      }
+    },
+    {
+      "name": "joint_00_a",
+      "assumption": "Unidentified target-centred research prior. Local link COM translations preserve each scaled central tensor; fixed plate remains independent. Point payload offset is hypothetical. Not hardware tolerance/rating, feasible workspace or demo visitation evidence.",
+      "parameters": {
+        "as2_mass_ratio": 1.1337868480725624,
+        "base_mass_ratio": 1.0475523859262466,
+        "leg_scale": 1.03049378413707,
+        "piper_mass_ratios": {
+          "piper_base_link": 1.0290201269090176,
+          "piper_link1": 1.0290201269090176,
+          "piper_link2": 1.0290201269090176,
+          "piper_link3": 1.0290201269090176,
+          "piper_link4": 1.0290201269090176,
+          "piper_link5": 1.0290201269090176,
+          "piper_link6": 1.0290201269090176,
+          "piper_flange_link": 1.0290201269090176,
+          "piper_gripper_base": 1.0290201269090176,
+          "piper_gripper_link1": 1.0290201269090176,
+          "piper_gripper_link2": 1.0290201269090176
+        },
+        "link_com_offsets_m": {
+          "base_link": [
+            -0.009917135406285525,
+            0.008163920901715756,
+            -0.0025878615118563176
+          ],
+          "piper_link1": [
+            -0.004170516654849053,
+            -0.002628136109560728,
+            0.00455575822852552
+          ],
+          "piper_link2": [
+            6.0510803014039996e-05,
+            -0.0049051378201693295,
+            -0.003287175800651312
+          ],
+          "piper_link3": [
+            -0.0021774440351873636,
+            -0.003491467628628016,
+            -0.004407816883176565
+          ],
+          "piper_link4": [
+            -0.0023905187007039787,
+            0.0026551226060837507,
+            -0.0008708872180432081
+          ],
+          "piper_link5": [
+            0.0046764618624001745,
+            0.001223097685724497,
+            0.0005844115000218154
+          ],
+          "piper_link6": [
+            -0.00155944949015975,
+            0.004197629801928997,
+            -0.004697060054168105
+          ]
+        },
+        "payload": {
+          "mass_kg": 1.6439637709408998,
+          "model": "point",
+          "com_tcp_m": [
+            0.007972973994910718,
+            -0.0007251479104161263,
+            -0.035743504762649536
+          ]
+        }
+      }
+    },
+    {
+      "name": "joint_00_b",
+      "assumption": "Unidentified target-centred research prior. Local link COM translations preserve each scaled central tensor; fixed plate remains independent. Point payload offset is hypothetical. Not hardware tolerance/rating, feasible workspace or demo visitation evidence.",
+      "parameters": {
+        "as2_mass_ratio": 1.1337868480725624,
+        "base_mass_ratio": 0.9524476140737533,
+        "leg_scale": 0.9695062158629297,
+        "piper_mass_ratios": {
+          "piper_base_link": 0.9709798730909824,
+          "piper_link1": 0.9709798730909824,
+          "piper_link2": 0.9709798730909824,
+          "piper_link3": 0.9709798730909824,
+          "piper_link4": 0.9709798730909824,
+          "piper_link5": 0.9709798730909824,
+          "piper_link6": 0.9709798730909824,
+          "piper_flange_link": 0.9709798730909824,
+          "piper_gripper_base": 0.9709798730909824,
+          "piper_gripper_link1": 0.9709798730909824,
+          "piper_gripper_link2": 0.9709798730909824
+        },
+        "link_com_offsets_m": {
+          "base_link": [
+            0.009917135406285525,
+            -0.008163920901715756,
+            0.0025878615118563176
+          ],
+          "piper_link1": [
+            0.004170516654849053,
+            0.002628136109560728,
+            -0.00455575822852552
+          ],
+          "piper_link2": [
+            -6.0510803014039996e-05,
+            0.0049051378201693295,
+            0.003287175800651312
+          ],
+          "piper_link3": [
+            0.0021774440351873636,
+            0.003491467628628016,
+            0.004407816883176565
+          ],
+          "piper_link4": [
+            0.0023905187007039787,
+            -0.0026551226060837507,
+            0.0008708872180432081
+          ],
+          "piper_link5": [
+            -0.0046764618624001745,
+            -0.001223097685724497,
+            -0.0005844115000218154
+          ],
+          "piper_link6": [
+            0.00155944949015975,
+            -0.004197629801928997,
+            0.004697060054168105
+          ]
+        },
+        "payload": {
+          "mass_kg": 0.35603622905910015,
+          "model": "point",
+          "com_tcp_m": [
+            -0.007972973994910718,
+            0.0007251479104161263,
+            0.035743504762649536
+          ]
+        }
+      }
+    },
+    {
+      "name": "joint_01_a",
+      "assumption": "Unidentified target-centred research prior. Local link COM translations preserve each scaled central tensor; fixed plate remains independent. Point payload offset is hypothetical. Not hardware tolerance/rating, feasible workspace or demo visitation evidence.",
+      "parameters": {
+        "as2_mass_ratio": 1.1337868480725624,
+        "base_mass_ratio": 0.9393410919234156,
+        "leg_scale": 0.9973795548081398,
+        "piper_mass_ratios": {
+          "piper_base_link": 0.9268828358501197,
+          "piper_link1": 0.9268828358501197,
+          "piper_link2": 0.9268828358501197,
+          "piper_link3": 0.9268828358501197,
+          "piper_link4": 0.9268828358501197,
+          "piper_link5": 0.9268828358501197,
+          "piper_link6": 0.9268828358501197,
+          "piper_flange_link": 0.9268828358501197,
+          "piper_gripper_base": 0.9268828358501197,
+          "piper_gripper_link1": 0.9268828358501197,
+          "piper_gripper_link2": 0.9268828358501197
+        },
+        "link_com_offsets_m": {
+          "base_link": [
+            0.0019074678979814053,
+            -0.0009174497425556183,
+            0.0015928576141595841
+          ],
+          "piper_link1": [
+            0.002942178975790739,
+            0.003205725261941552,
+            -0.00030368329025805
+          ],
+          "piper_link2": [
+            -0.0037301615159958603,
+            0.0016903994698077441,
+            0.0042188524920493365
+          ],
+          "piper_link3": [
+            0.0016010146774351596,
+            0.002811727160587907,
+            0.0009731306973844767
+          ],
+          "piper_link4": [
+            0.0011049406602978706,
+            -0.004962467085570097,
+            0.002613186286762357
+          ],
+          "piper_link5": [
+            -0.0017338054534047841,
+            -0.004612647127360105,
+            -0.003906719060614705
+          ],
+          "piper_link6": [
+            0.0008864108659327031,
+            -0.003962596785277129,
+            0.002567493477836251
+          ]
+        },
+        "payload": {
+          "mass_kg": 0.4313648995012045,
+          "model": "point",
+          "com_tcp_m": [
+            -0.017820806764066218,
+            0.0054011793434619905,
+            0.017658399976789953
+          ]
+        }
+      }
+    },
+    {
+      "name": "joint_01_b",
+      "assumption": "Unidentified target-centred research prior. Local link COM translations preserve each scaled central tensor; fixed plate remains independent. Point payload offset is hypothetical. Not hardware tolerance/rating, feasible workspace or demo visitation evidence.",
+      "parameters": {
+        "as2_mass_ratio": 1.1337868480725624,
+        "base_mass_ratio": 1.0606589080765843,
+        "leg_scale": 1.00262044519186,
+        "piper_mass_ratios": {
+          "piper_base_link": 1.0731171641498805,
+          "piper_link1": 1.0731171641498805,
+          "piper_link2": 1.0731171641498805,
+          "piper_link3": 1.0731171641498805,
+          "piper_link4": 1.0731171641498805,
+          "piper_link5": 1.0731171641498805,
+          "piper_link6": 1.0731171641498805,
+          "piper_flange_link": 1.0731171641498805,
+          "piper_gripper_base": 1.0731171641498805,
+          "piper_gripper_link1": 1.0731171641498805,
+          "piper_gripper_link2": 1.0731171641498805
+        },
+        "link_com_offsets_m": {
+          "base_link": [
+            -0.0019074678979814053,
+            0.0009174497425556183,
+            -0.0015928576141595841
+          ],
+          "piper_link1": [
+            -0.002942178975790739,
+            -0.003205725261941552,
+            0.00030368329025805
+          ],
+          "piper_link2": [
+            0.0037301615159958603,
+            -0.0016903994698077441,
+            -0.0042188524920493365
+          ],
+          "piper_link3": [
+            -0.0016010146774351596,
+            -0.002811727160587907,
+            -0.0009731306973844767
+          ],
+          "piper_link4": [
+            -0.0011049406602978706,
+            0.004962467085570097,
+            -0.002613186286762357
+          ],
+          "piper_link5": [
+            0.0017338054534047841,
+            0.004612647127360105,
+            0.003906719060614705
+          ],
+          "piper_link6": [
+            -0.0008864108659327031,
+            0.003962596785277129,
+            -0.002567493477836251
+          ]
+        },
+        "payload": {
+          "mass_kg": 1.5686351004987955,
+          "model": "point",
+          "com_tcp_m": [
+            0.017820806764066218,
+            -0.0054011793434619905,
+            -0.017658399976789953
+          ]
+        }
+      }
+    },
+    {
+      "name": "joint_02_a",
+      "assumption": "Unidentified target-centred research prior. Local link COM translations preserve each scaled central tensor; fixed plate remains independent. Point payload offset is hypothetical. Not hardware tolerance/rating, feasible workspace or demo visitation evidence.",
+      "parameters": {
+        "as2_mass_ratio": 1.1337868480725624,
+        "base_mass_ratio": 0.9998385855928064,
+        "leg_scale": 1.0228744752705097,
+        "piper_mass_ratios": {
+          "piper_base_link": 1.0854110714048146,
+          "piper_link1": 1.0854110714048146,
+          "piper_link2": 1.0854110714048146,
+          "piper_link3": 1.0854110714048146,
+          "piper_link4": 1.0854110714048146,
+          "piper_link5": 1.0854110714048146,
+          "piper_link6": 1.0854110714048146,
+          "piper_flange_link": 1.0854110714048146,
+          "piper_gripper_base": 1.0854110714048146,
+          "piper_gripper_link1": 1.0854110714048146,
+          "piper_gripper_link2": 1.0854110714048146
+        },
+        "link_com_offsets_m": {
+          "base_link": [
+            0.007897658478468657,
+            -0.008519269358366728,
+            -0.008553077541291714
+          ],
+          "piper_link1": [
+            0.002059932891279459,
+            0.0020700257923454046,
+            -0.002782653057947755
+          ],
+          "piper_link2": [
+            -0.0004342022351920605,
+            0.004883010461926461,
+            -0.0012028497364372016
+          ],
+          "piper_link3": [
+            -0.0045927162282168865,
+            0.00015141711570322515,
+            -0.0010522669274359942
+          ],
+          "piper_link4": [
+            0.0033411940187215807,
+            0.0008088317140936852,
+            0.0017340111546218396
+          ],
+          "piper_link5": [
+            0.002045851470902562,
+            0.003521658834069967,
+            -0.0018342560436576604
+          ],
+          "piper_link6": [
+            -0.004897625930607319,
+            0.0002376655861735344,
+            -0.00019388865679502489
+          ]
+        },
+        "payload": {
+          "mass_kg": 1.0344145223498344,
+          "model": "point",
+          "com_tcp_m": [
+            -0.00775853481143713,
+            -0.010895509719848633,
+            0.03973090937361121
+          ]
+        }
+      }
+    },
+    {
+      "name": "joint_02_b",
+      "assumption": "Unidentified target-centred research prior. Local link COM translations preserve each scaled central tensor; fixed plate remains independent. Point payload offset is hypothetical. Not hardware tolerance/rating, feasible workspace or demo visitation evidence.",
+      "parameters": {
+        "as2_mass_ratio": 1.1337868480725624,
+        "base_mass_ratio": 1.0001614144071937,
+        "leg_scale": 0.9771255247294902,
+        "piper_mass_ratios": {
+          "piper_base_link": 0.9145889285951853,
+          "piper_link1": 0.9145889285951853,
+          "piper_link2": 0.9145889285951853,
+          "piper_link3": 0.9145889285951853,
+          "piper_link4": 0.9145889285951853,
+          "piper_link5": 0.9145889285951853,
+          "piper_link6": 0.9145889285951853,
+          "piper_flange_link": 0.9145889285951853,
+          "piper_gripper_base": 0.9145889285951853,
+          "piper_gripper_link1": 0.9145889285951853,
+          "piper_gripper_link2": 0.9145889285951853
+        },
+        "link_com_offsets_m": {
+          "base_link": [
+            -0.007897658478468657,
+            0.008519269358366728,
+            0.008553077541291714
+          ],
+          "piper_link1": [
+            -0.002059932891279459,
+            -0.0020700257923454046,
+            0.002782653057947755
+          ],
+          "piper_link2": [
+            0.0004342022351920605,
+            -0.004883010461926461,
+            0.0012028497364372016
+          ],
+          "piper_link3": [
+            0.0045927162282168865,
+            -0.00015141711570322515,
+            0.0010522669274359942
+          ],
+          "piper_link4": [
+            -0.0033411940187215807,
+            -0.0008088317140936852,
+            -0.0017340111546218396
+          ],
+          "piper_link5": [
+            -0.002045851470902562,
+            -0.003521658834069967,
+            0.0018342560436576604
+          ],
+          "piper_link6": [
+            0.004897625930607319,
+            -0.0002376655861735344,
+            0.00019388865679502489
+          ]
+        },
+        "payload": {
+          "mass_kg": 0.9655854776501656,
+          "model": "point",
+          "com_tcp_m": [
+            0.00775853481143713,
+            0.010895509719848633,
+            -0.03973090937361121
+          ]
+        }
+      }
+    },
+    {
+      "name": "joint_03_a",
+      "assumption": "Unidentified target-centred research prior. Local link COM translations preserve each scaled central tensor; fixed plate remains independent. Point payload offset is hypothetical. Not hardware tolerance/rating, feasible workspace or demo visitation evidence.",
+      "parameters": {
+        "as2_mass_ratio": 1.1337868480725624,
+        "base_mass_ratio": 1.0885182041674852,
+        "leg_scale": 0.9554043198004365,
+        "piper_mass_ratios": {
+          "piper_base_link": 0.9829066388309002,
+          "piper_link1": 0.9829066388309002,
+          "piper_link2": 0.9829066388309002,
+          "piper_link3": 0.9829066388309002,
+          "piper_link4": 0.9829066388309002,
+          "piper_link5": 0.9829066388309002,
+          "piper_link6": 0.9829066388309002,
+          "piper_flange_link": 0.9829066388309002,
+          "piper_gripper_base": 0.9829066388309002,
+          "piper_gripper_link1": 0.9829066388309002,
+          "piper_gripper_link2": 0.9829066388309002
+        },
+        "link_com_offsets_m": {
+          "base_link": [
+            -0.0002774241007864475,
+            0.0011554583720862865,
+            0.006876877788454294
+          ],
+          "piper_link1": [
+            -0.0008266836777329445,
+            -0.0014710741117596627,
+            0.0020450978633016347
+          ],
+          "piper_link2": [
+            0.003356472672894597,
+            -0.0017122174799442291,
+            0.0015204625390470028
+          ],
+          "piper_link3": [
+            0.00417246057651937,
+            -0.001151591558009386,
+            0.004484663605690002
+          ],
+          "piper_link4": [
+            -0.004568338049575686,
+            -0.0015732340794056654,
+            -0.0047184316255152224
+          ],
+          "piper_link5": [
+            -0.004357101311907172,
+            -0.002011306155472994,
+            0.0026565693411976098
+          ],
+          "piper_link6": [
+            0.002977938912808895,
+            -0.0003151325695216656,
+            0.0024002644047141078
+          ]
+        },
+        "payload": {
+          "mass_kg": 0.7596475295722485,
+          "model": "point",
+          "com_tcp_m": [
+            0.017605521492660047,
+            0.015555677972733975,
+            -0.007425376307219267
+          ]
+        }
+      }
+    },
+    {
+      "name": "joint_03_b",
+      "assumption": "Unidentified target-centred research prior. Local link COM translations preserve each scaled central tensor; fixed plate remains independent. Point payload offset is hypothetical. Not hardware tolerance/rating, feasible workspace or demo visitation evidence.",
+      "parameters": {
+        "as2_mass_ratio": 1.1337868480725624,
+        "base_mass_ratio": 0.9114817958325148,
+        "leg_scale": 1.0445956801995635,
+        "piper_mass_ratios": {
+          "piper_base_link": 1.0170933611690998,
+          "piper_link1": 1.0170933611690998,
+          "piper_link2": 1.0170933611690998,
+          "piper_link3": 1.0170933611690998,
+          "piper_link4": 1.0170933611690998,
+          "piper_link5": 1.0170933611690998,
+          "piper_link6": 1.0170933611690998,
+          "piper_flange_link": 1.0170933611690998,
+          "piper_gripper_base": 1.0170933611690998,
+          "piper_gripper_link1": 1.0170933611690998,
+          "piper_gripper_link2": 1.0170933611690998
+        },
+        "link_com_offsets_m": {
+          "base_link": [
+            0.0002774241007864475,
+            -0.0011554583720862865,
+            -0.006876877788454294
+          ],
+          "piper_link1": [
+            0.0008266836777329445,
+            0.0014710741117596627,
+            -0.0020450978633016347
+          ],
+          "piper_link2": [
+            -0.003356472672894597,
+            0.0017122174799442291,
+            -0.0015204625390470028
+          ],
+          "piper_link3": [
+            -0.00417246057651937,
+            0.001151591558009386,
+            -0.004484663605690002
+          ],
+          "piper_link4": [
+            0.004568338049575686,
+            0.0015732340794056654,
+            0.0047184316255152224
+          ],
+          "piper_link5": [
+            0.004357101311907172,
+            0.002011306155472994,
+            -0.0026565693411976098
+          ],
+          "piper_link6": [
+            -0.002977938912808895,
+            0.0003151325695216656,
+            -0.0024002644047141078
+          ]
+        },
+        "payload": {
+          "mass_kg": 1.2403524704277515,
+          "model": "point",
+          "com_tcp_m": [
+            -0.017605521492660047,
+            -0.015555677972733975,
+            0.007425376307219267
+          ]
+        }
+      }
+    },
+    {
+      "name": "joint_04_a",
+      "assumption": "Unidentified target-centred research prior. Local link COM translations preserve each scaled central tensor; fixed plate remains independent. Point payload offset is hypothetical. Not hardware tolerance/rating, feasible workspace or demo visitation evidence.",
+      "parameters": {
+        "as2_mass_ratio": 1.1337868480725624,
+        "base_mass_ratio": 1.0725962271913887,
+        "leg_scale": 1.0071619329042731,
+        "piper_mass_ratios": {
+          "piper_base_link": 0.9174557313323021,
+          "piper_link1": 0.9174557313323021,
+          "piper_link2": 0.9174557313323021,
+          "piper_link3": 0.9174557313323021,
+          "piper_link4": 0.9174557313323021,
+          "piper_link5": 0.9174557313323021,
+          "piper_link6": 0.9174557313323021,
+          "piper_flange_link": 0.9174557313323021,
+          "piper_gripper_base": 0.9174557313323021,
+          "piper_gripper_link1": 0.9174557313323021,
+          "piper_gripper_link2": 0.9174557313323021
+        },
+        "link_com_offsets_m": {
+          "base_link": [
+            -0.00450284194201231,
+            0.007078029401600361,
+            -0.006171634513884783
+          ],
+          "piper_link1": [
+            0.0011032421980053187,
+            0.0012406768836081027,
+            -0.002365099648013711
+          ],
+          "piper_link2": [
+            -0.0015733451396226883,
+            -0.0010016692709177732,
+            -0.0015038701612502337
+          ],
+          "piper_link3": [
+            0.0008195276372134685,
+            -0.0019431087747216226,
+            0.003341731810942292
+          ],
+          "piper_link4": [
+            -0.0031068488024175167,
+            -0.0002220797259360552,
+            0.0009128470066934824
+          ],
+          "piper_link5": [
+            0.0026717785466462375,
+            0.0024775312934070827,
+            0.0019638877827674152
+          ],
+          "piper_link6": [
+            -0.0037022719345986845,
+            -0.0014215107262134552,
+            0.0009256901219487191
+          ]
+        },
+        "payload": {
+          "mass_kg": 0.5345461498945951,
+          "model": "point",
+          "com_tcp_m": [
+            -0.0026267213374376298,
+            -0.01763783432543278,
+            0.011690722033381463
+          ]
+        }
+      }
+    },
+    {
+      "name": "joint_04_b",
+      "assumption": "Unidentified target-centred research prior. Local link COM translations preserve each scaled central tensor; fixed plate remains independent. Point payload offset is hypothetical. Not hardware tolerance/rating, feasible workspace or demo visitation evidence.",
+      "parameters": {
+        "as2_mass_ratio": 1.1337868480725624,
+        "base_mass_ratio": 0.9274037728086114,
+        "leg_scale": 0.9928380670957266,
+        "piper_mass_ratios": {
+          "piper_base_link": 1.0825442686676978,
+          "piper_link1": 1.0825442686676978,
+          "piper_link2": 1.0825442686676978,
+          "piper_link3": 1.0825442686676978,
+          "piper_link4": 1.0825442686676978,
+          "piper_link5": 1.0825442686676978,
+          "piper_link6": 1.0825442686676978,
+          "piper_flange_link": 1.0825442686676978,
+          "piper_gripper_base": 1.0825442686676978,
+          "piper_gripper_link1": 1.0825442686676978,
+          "piper_gripper_link2": 1.0825442686676978
+        },
+        "link_com_offsets_m": {
+          "base_link": [
+            0.00450284194201231,
+            -0.007078029401600361,
+            0.006171634513884783
+          ],
+          "piper_link1": [
+            -0.0011032421980053187,
+            -0.0012406768836081027,
+            0.002365099648013711
+          ],
+          "piper_link2": [
+            0.0015733451396226883,
+            0.0010016692709177732,
+            0.0015038701612502337
+          ],
+          "piper_link3": [
+            -0.0008195276372134685,
+            0.0019431087747216226,
+            -0.003341731810942292
+          ],
+          "piper_link4": [
+            0.0031068488024175167,
+            0.0002220797259360552,
+            -0.0009128470066934824
+          ],
+          "piper_link5": [
+            -0.0026717785466462375,
+            -0.0024775312934070827,
+            -0.0019638877827674152
+          ],
+          "piper_link6": [
+            0.0037022719345986845,
+            0.0014215107262134552,
+            -0.0009256901219487191
+          ]
+        },
+        "payload": {
+          "mass_kg": 1.4654538501054049,
+          "model": "point",
+          "com_tcp_m": [
+            0.0026267213374376298,
+            0.01763783432543278,
+            -0.011690722033381463
+          ]
+        }
+      }
+    },
+    {
+      "name": "joint_05_a",
+      "assumption": "Unidentified target-centred research prior. Local link COM translations preserve each scaled central tensor; fixed plate remains independent. Point payload offset is hypothetical. Not hardware tolerance/rating, feasible workspace or demo visitation evidence.",
+      "parameters": {
+        "as2_mass_ratio": 1.1337868480725624,
+        "base_mass_ratio": 0.9643887795507908,
+        "leg_scale": 0.9644766255281865,
+        "piper_mass_ratios": {
+          "piper_base_link": 1.0133614052087068,
+          "piper_link1": 1.0133614052087068,
+          "piper_link2": 1.0133614052087068,
+          "piper_link3": 1.0133614052087068,
+          "piper_link4": 1.0133614052087068,
+          "piper_link5": 1.0133614052087068,
+          "piper_link6": 1.0133614052087068,
+          "piper_flange_link": 1.0133614052087068,
+          "piper_gripper_base": 1.0133614052087068,
+          "piper_gripper_link1": 1.0133614052087068,
+          "piper_gripper_link2": 1.0133614052087068
+        },
+        "link_com_offsets_m": {
+          "base_link": [
+            0.007439257763326168,
+            -0.004480148330330848,
+            0.009649553298950196
+          ],
+          "piper_link1": [
+            -0.0024090657476335763,
+            -0.0005694844480603934,
+            0.003122148057445884
+          ],
+          "piper_link2": [
+            0.0046372222062200305,
+            0.003103174092248082,
+            0.0011855681613087655
+          ],
+          "piper_link3": [
+            -0.0004578657168895006,
+            0.0018415989261120558,
+            -0.0024100949428975584
+          ],
+          "piper_link4": [
+            0.004333933210000396,
+            0.002240896988660097,
+            -0.0026539388205856084
+          ],
+          "piper_link5": [
+            -0.0012379117961972951,
+            -0.003367690509185195,
+            -0.0034644161444157364
+          ],
+          "piper_link6": [
+            0.004359451029449702,
+            0.0016553993336856365,
+            -0.001805180348455906
+          ]
+        },
+        "payload": {
+          "mass_kg": 1.2595084551721811,
+          "model": "point",
+          "com_tcp_m": [
+            0.012776435464620591,
+            0.013567228652536869,
+            -0.0419340530410409
+          ]
+        }
+      }
+    },
+    {
+      "name": "joint_05_b",
+      "assumption": "Unidentified target-centred research prior. Local link COM translations preserve each scaled central tensor; fixed plate remains independent. Point payload offset is hypothetical. Not hardware tolerance/rating, feasible workspace or demo visitation evidence.",
+      "parameters": {
+        "as2_mass_ratio": 1.1337868480725624,
+        "base_mass_ratio": 1.0356112204492092,
+        "leg_scale": 1.0355233744718133,
+        "piper_mass_ratios": {
+          "piper_base_link": 0.9866385947912932,
+          "piper_link1": 0.9866385947912932,
+          "piper_link2": 0.9866385947912932,
+          "piper_link3": 0.9866385947912932,
+          "piper_link4": 0.9866385947912932,
+          "piper_link5": 0.9866385947912932,
+          "piper_link6": 0.9866385947912932,
+          "piper_flange_link": 0.9866385947912932,
+          "piper_gripper_base": 0.9866385947912932,
+          "piper_gripper_link1": 0.9866385947912932,
+          "piper_gripper_link2": 0.9866385947912932
+        },
+        "link_com_offsets_m": {
+          "base_link": [
+            -0.007439257763326168,
+            0.004480148330330848,
+            -0.009649553298950196
+          ],
+          "piper_link1": [
+            0.0024090657476335763,
+            0.0005694844480603934,
+            -0.003122148057445884
+          ],
+          "piper_link2": [
+            -0.0046372222062200305,
+            -0.003103174092248082,
+            -0.0011855681613087655
+          ],
+          "piper_link3": [
+            0.0004578657168895006,
+            -0.0018415989261120558,
+            0.0024100949428975584
+          ],
+          "piper_link4": [
+            -0.004333933210000396,
+            -0.002240896988660097,
+            0.0026539388205856084
+          ],
+          "piper_link5": [
+            0.0012379117961972951,
+            0.003367690509185195,
+            0.0034644161444157364
+          ],
+          "piper_link6": [
+            -0.004359451029449702,
+            -0.0016553993336856365,
+            0.001805180348455906
+          ]
+        },
+        "payload": {
+          "mass_kg": 0.7404915448278189,
+          "model": "point",
+          "com_tcp_m": [
+            -0.012776435464620591,
+            -0.013567228652536869,
+            0.0419340530410409
+          ]
+        }
+      }
+    },
+    {
+      "name": "joint_06_a",
+      "assumption": "Unidentified target-centred research prior. Local link COM translations preserve each scaled central tensor; fixed plate remains independent. Point payload offset is hypothetical. Not hardware tolerance/rating, feasible workspace or demo visitation evidence.",
+      "parameters": {
+        "as2_mass_ratio": 1.1337868480725624,
+        "base_mass_ratio": 0.9249838855117559,
+        "leg_scale": 1.040153174754232,
+        "piper_mass_ratios": {
+          "piper_base_link": 0.9735406357795,
+          "piper_link1": 0.9735406357795,
+          "piper_link2": 0.9735406357795,
+          "piper_link3": 0.9735406357795,
+          "piper_link4": 0.9735406357795,
+          "piper_link5": 0.9735406357795,
+          "piper_link6": 0.9735406357795,
+          "piper_flange_link": 0.9735406357795,
+          "piper_gripper_base": 0.9735406357795,
+          "piper_gripper_link1": 0.9735406357795,
+          "piper_gripper_link2": 0.9735406357795
+        },
+        "link_com_offsets_m": {
+          "base_link": [
+            0.0026774950698018074,
+            -0.0074942604266107085,
+            -0.00020337183028459549
+          ],
+          "piper_link1": [
+            -0.0025888308603316547,
+            -0.004081301772966981,
+            0.0005894578155130148
+          ],
+          "piper_link2": [
+            0.001360791400074959,
+            0.0009850368648767472,
+            -0.004241318926215172
+          ],
+          "piper_link3": [
+            0.0033920388948172333,
+            0.004189400030300021,
+            0.0024870948493480685
+          ],
+          "piper_link4": [
+            0.0015312689077109098,
+            -0.003237794078886509,
+            -0.001775073166936636
+          ],
+          "piper_link5": [
+            0.00029508394189178946,
+            0.00476631504483521,
+            -0.0007140432391315698
+          ],
+          "piper_link6": [
+            -0.00016756255179643632,
+            -0.0028521762788295746,
+            0.0041983928624540565
+          ]
+        },
+        "payload": {
+          "mass_kg": 0.14376309886574745,
+          "model": "point",
+          "com_tcp_m": [
+            0.0028801731765270232,
+            -0.007811863534152508,
+            -0.01400671722367406
+          ]
+        }
+      }
+    },
+    {
+      "name": "joint_06_b",
+      "assumption": "Unidentified target-centred research prior. Local link COM translations preserve each scaled central tensor; fixed plate remains independent. Point payload offset is hypothetical. Not hardware tolerance/rating, feasible workspace or demo visitation evidence.",
+      "parameters": {
+        "as2_mass_ratio": 1.1337868480725624,
+        "base_mass_ratio": 1.075016114488244,
+        "leg_scale": 0.9598468252457678,
+        "piper_mass_ratios": {
+          "piper_base_link": 1.0264593642205,
+          "piper_link1": 1.0264593642205,
+          "piper_link2": 1.0264593642205,
+          "piper_link3": 1.0264593642205,
+          "piper_link4": 1.0264593642205,
+          "piper_link5": 1.0264593642205,
+          "piper_link6": 1.0264593642205,
+          "piper_flange_link": 1.0264593642205,
+          "piper_gripper_base": 1.0264593642205,
+          "piper_gripper_link1": 1.0264593642205,
+          "piper_gripper_link2": 1.0264593642205
+        },
+        "link_com_offsets_m": {
+          "base_link": [
+            -0.0026774950698018074,
+            0.0074942604266107085,
+            0.00020337183028459549
+          ],
+          "piper_link1": [
+            0.0025888308603316547,
+            0.004081301772966981,
+            -0.0005894578155130148
+          ],
+          "piper_link2": [
+            -0.001360791400074959,
+            -0.0009850368648767472,
+            0.004241318926215172
+          ],
+          "piper_link3": [
+            -0.0033920388948172333,
+            -0.004189400030300021,
+            -0.0024870948493480685
+          ],
+          "piper_link4": [
+            -0.0015312689077109098,
+            0.003237794078886509,
+            0.001775073166936636
+          ],
+          "piper_link5": [
+            -0.00029508394189178946,
+            -0.00476631504483521,
+            0.0007140432391315698
+          ],
+          "piper_link6": [
+            0.00016756255179643632,
+            0.0028521762788295746,
+            -0.0041983928624540565
+          ]
+        },
+        "payload": {
+          "mass_kg": 1.8562369011342525,
+          "model": "point",
+          "com_tcp_m": [
+            -0.0028801731765270232,
+            0.007811863534152508,
+            0.01400671722367406
+          ]
+        }
+      }
+    },
+    {
+      "name": "joint_07_a",
+      "assumption": "Unidentified target-centred research prior. Local link COM translations preserve each scaled central tensor; fixed plate remains independent. Point payload offset is hypothetical. Not hardware tolerance/rating, feasible workspace or demo visitation evidence.",
+      "parameters": {
+        "as2_mass_ratio": 1.1337868480725624,
+        "base_mass_ratio": 1.0136597456410528,
+        "leg_scale": 0.9818604146130383,
+        "piper_mass_ratios": {
+          "piper_base_link": 1.0698621347546577,
+          "piper_link1": 1.0698621347546577,
+          "piper_link2": 1.0698621347546577,
+          "piper_link3": 1.0698621347546577,
+          "piper_link4": 1.0698621347546577,
+          "piper_link5": 1.0698621347546577,
+          "piper_link6": 1.0698621347546577,
+          "piper_flange_link": 1.0698621347546577,
+          "piper_gripper_base": 1.0698621347546577,
+          "piper_gripper_link1": 1.0698621347546577,
+          "piper_gripper_link2": 1.0698621347546577
+        },
+        "link_com_offsets_m": {
+          "base_link": [
+            -0.005380708612501621,
+            0.004701219704002142,
+            0.00436735974624753
+          ],
+          "piper_link1": [
+            0.0038995466101914645,
+            0.004733573235571385,
+            -0.004861102038994432
+          ],
+          "piper_link2": [
+            -0.004849773580208421,
+            -0.0031207214295864106,
+            0.003308958103880286
+          ],
+          "piper_link3": [
+            -0.002874203268438578,
+            -0.0045954747125506405,
+            -0.003421325208619237
+          ],
+          "piper_link4": [
+            -0.0002454405464231968,
+            0.00429957372136414,
+            0.004760691989213229
+          ],
+          "piper_link5": [
+            -0.003607310941442847,
+            -0.0007565721403807402,
+            0.004714565863832831
+          ],
+          "piper_link6": [
+            0.002073831520974636,
+            0.002773564886301756,
+            -0.0032419408764690163
+          ]
+        },
+        "payload": {
+          "mass_kg": 1.9315572828054428,
+          "model": "point",
+          "com_tcp_m": [
+            -0.013030756786465645,
+            0.003718058541417122,
+            0.03337282026186585
+          ]
+        }
+      }
+    },
+    {
+      "name": "joint_07_b",
+      "assumption": "Unidentified target-centred research prior. Local link COM translations preserve each scaled central tensor; fixed plate remains independent. Point payload offset is hypothetical. Not hardware tolerance/rating, feasible workspace or demo visitation evidence.",
+      "parameters": {
+        "as2_mass_ratio": 1.1337868480725624,
+        "base_mass_ratio": 0.9863402543589473,
+        "leg_scale": 1.0181395853869617,
+        "piper_mass_ratios": {
+          "piper_base_link": 0.9301378652453423,
+          "piper_link1": 0.9301378652453423,
+          "piper_link2": 0.9301378652453423,
+          "piper_link3": 0.9301378652453423,
+          "piper_link4": 0.9301378652453423,
+          "piper_link5": 0.9301378652453423,
+          "piper_link6": 0.9301378652453423,
+          "piper_flange_link": 0.9301378652453423,
+          "piper_gripper_base": 0.9301378652453423,
+          "piper_gripper_link1": 0.9301378652453423,
+          "piper_gripper_link2": 0.9301378652453423
+        },
+        "link_com_offsets_m": {
+          "base_link": [
+            0.005380708612501621,
+            -0.004701219704002142,
+            -0.00436735974624753
+          ],
+          "piper_link1": [
+            -0.0038995466101914645,
+            -0.004733573235571385,
+            0.004861102038994432
+          ],
+          "piper_link2": [
+            0.004849773580208421,
+            0.0031207214295864106,
+            -0.003308958103880286
+          ],
+          "piper_link3": [
+            0.002874203268438578,
+            0.0045954747125506405,
+            0.003421325208619237
+          ],
+          "piper_link4": [
+            0.0002454405464231968,
+            -0.00429957372136414,
+            -0.004760691989213229
+          ],
+          "piper_link5": [
+            0.003607310941442847,
+            0.0007565721403807402,
+            -0.004714565863832831
+          ],
+          "piper_link6": [
+            -0.002073831520974636,
+            -0.002773564886301756,
+            0.0032419408764690163
+          ]
+        },
+        "payload": {
+          "mass_kg": 0.06844271719455719,
+          "model": "point",
+          "com_tcp_m": [
+            0.013030756786465645,
+            -0.003718058541417122,
+            -0.03337282026186585
+          ]
+        }
+      }
+    }
+  ]
+}

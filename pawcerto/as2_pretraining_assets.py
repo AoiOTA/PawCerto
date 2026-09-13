@@ -129,7 +129,7 @@ def merge_payload(link, tcp, payload):
 
 def transform_variant(root, parameters, nominal):
     """Return a transformed copy; never mutate the nominal input tree."""
-    unknown = set(parameters) - {'as2_mass_ratio', 'base_mass_ratio', 'leg_scale', 'piper_mass_ratios', 'payload'}
+    unknown = set(parameters) - {'as2_mass_ratio', 'base_mass_ratio', 'leg_scale', 'piper_mass_ratios', 'payload', 'link_com_offsets_m'}
     if unknown:
         raise ValueError(f'Unknown variant parameters: {sorted(unknown)}')
     as2_ratio = _positive(parameters.get('as2_mass_ratio', 1), 'as2_mass_ratio')
@@ -138,6 +138,16 @@ def transform_variant(root, parameters, nominal):
     ratios = parameters.get('piper_mass_ratios', {})
     out = deepcopy(root)
     links = {l.get('name'): l for l in out.findall('link')}
+    offsets = parameters.get('link_com_offsets_m', {})
+    if not isinstance(offsets, dict):
+        raise ValueError('link_com_offsets_m must map physical link names to local metre offsets')
+    physical = {n for n, l in links.items() if l.find('inertial/mass') is not None
+                and float(l.find('inertial/mass').get('value')) > 0}
+    if set(offsets) - physical:
+        raise ValueError(f'Unknown positive-mass COM links: {sorted(set(offsets) - physical)}')
+    offsets = {name: np.asarray(value, dtype=float) for name, value in offsets.items()}
+    if any(value.shape != (3,) or not np.isfinite(value).all() for value in offsets.values()):
+        raise ValueError('Each link COM offset must be a finite 3-vector in local metres')
     physical_arm = {n for n,l in links.items() if n.startswith('piper_') and l.find('inertial') is not None}
     if set(ratios) - physical_arm:
         raise ValueError(f'Unknown positive-mass Piper links: {sorted(set(ratios)-physical_arm)}')
@@ -151,10 +161,17 @@ def transform_variant(root, parameters, nominal):
         ratio = base_ratio if name == 'base_link' else _positive(ratios.get(name, 1), f'{name} mass ratio')
         if not name.startswith('piper_'):
             ratio *= as2_ratio
-        if name == 'base_link' and 'rail_mount' in nominal and ratio != 1:
-            merge_mount_plate_inertia(link, nominal['rail_mount']['plate'], merged_base_ratio=ratio)
+        if name == 'base_link' and 'rail_mount' in nominal and (ratio != 1 or name in offsets):
+            merge_mount_plate_inertia(link, nominal['rail_mount']['plate'], merged_base_ratio=ratio,
+                                     original_base_com_offset_m=offsets.get(name))
         else:
             _scale_link(link, scale, ratio)
+            if name in offsets:
+                # Applied after geometry scaling, in final link axes; retain COM tensor.
+                origin = link.find('inertial/origin')
+                if origin is None:
+                    origin = ET.SubElement(link.find('inertial'), 'origin')
+                origin.set('xyz', numbers(_vec(origin, 'xyz') + offsets[name]))
     if leg_scale != 1:
         for joint in out.findall('joint'):
             if joint.find('parent').get('link') in leg_names:
@@ -213,6 +230,9 @@ def build_family(output, config_path=FAMILY_CONFIG, *, nominal_config_path=CONFI
         if not entry['name'].replace('_','').isalnum() or not entry['name'].isascii():
             raise ValueError('Variant name must be an ASCII alphanumeric/underscore directory name')
     nominal_config_path = Path(nominal_config_path).resolve()
+    required_assembly = family['parameter_ranges'].get('source', {}).get('assembly_sha256')
+    if required_assembly is not None and hashlib.sha256(nominal_config_path.read_bytes()).hexdigest() != required_assembly:
+        raise ValueError('Selected nominal assembly differs from this target distribution; pass its matching --nominal-config')
     nominal = json.loads(nominal_config_path.read_text())
     original_tree, preparation = prepare_urdf(output/'nominal', config_path=nominal_config_path)
     original_merged = original_tree.getroot()
