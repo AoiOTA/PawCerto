@@ -1,0 +1,227 @@
+{
+  "schema_version": 1,
+  "description": "Finite AS2/Piper-H general end-effector tasks constructed by source FK; reference root and leg configurations are witnesses, not a gait or actor supervision.",
+  "episode_length_s": 17.0,
+  "dt": 0.005,
+  "frames": 3400,
+  "knot_times_s": [
+    0.0,
+    2.0,
+    5.0,
+    8.0,
+    11.0,
+    15.0,
+    16.995
+  ],
+  "root_xy_m": [
+    -0.5,
+    0
+  ],
+  "default_foot_clearance_m": 0.002,
+  "translation": {
+    "distance_m": 2.4,
+    "start_s": 2.0,
+    "end_s": 15.0,
+    "minimum_required_root_displacement_m": 0.4
+  },
+  "poses_rad": {
+    "default": [
+      0.0,
+      1.0,
+      -1.2,
+      0.0,
+      0.2,
+      0.0
+    ],
+    "high": [
+      0.0,
+      0.6,
+      -1.2,
+      0.0,
+      0.6,
+      0.0
+    ],
+    "mid": [
+      0.0,
+      1.8,
+      -1.7,
+      0.0,
+      0.1,
+      0.0
+    ],
+    "low": [
+      0.0,
+      2.0,
+      -0.6,
+      0.0,
+      -1.2,
+      0.0
+    ],
+    "left": [
+      0.8,
+      1.8,
+      -1.7,
+      0.0,
+      0.1,
+      0.0
+    ],
+    "right": [
+      -0.8,
+      1.8,
+      -1.7,
+      0.0,
+      0.1,
+      0.0
+    ],
+    "orient_a": [
+      0.0,
+      1.0,
+      -1.2,
+      0.6,
+      -0.35,
+      0.7
+    ],
+    "orient_b": [
+      0.0,
+      1.0,
+      -1.2,
+      -0.6,
+      0.65,
+      -0.7
+    ],
+    "long": [
+      0.0,
+      2.3,
+      -1.8,
+      0.0,
+      -0.5,
+      0.0
+    ]
+  },
+  "trajectories": [
+    {
+      "name": "height_front",
+      "waypoints": [
+        "default",
+        "default",
+        "high",
+        "mid",
+        "low",
+        "default",
+        "default"
+      ],
+      "description": "High/mid/low front EE positions from valid arm configurations."
+    },
+    {
+      "name": "azimuth_sweep",
+      "waypoints": [
+        "default",
+        "default",
+        "left",
+        "mid",
+        "right",
+        "default",
+        "default"
+      ],
+      "description": "Left/front/right directions via joint1 within source limits."
+    },
+    {
+      "name": "tool_orientation",
+      "waypoints": [
+        "default",
+        "default",
+        "orient_a",
+        "default",
+        "orient_b",
+        "default",
+        "default"
+      ],
+      "description": "Tool orientation varies through wrist configurations, position follows true FK."
+    },
+    {
+      "name": "extension_mix",
+      "waypoints": [
+        "default",
+        "default",
+        "high",
+        "long",
+        "low",
+        "default",
+        "default"
+      ],
+      "description": "Near/far/low references from source joint geometry, not Cartesian box sampling."
+    },
+    {
+      "name": "translate_forward",
+      "waypoints": [
+        "default",
+        "default",
+        "mid",
+        "mid",
+        "mid",
+        "default",
+        "default"
+      ],
+      "description": "2.4m endpoint separation requires root translation even with arbitrary root rotation under conservative complete-chain bound; reference feet do not specify a gait.",
+      "translation_direction": [
+        1,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "translate_backward",
+      "waypoints": [
+        "default",
+        "default",
+        "mid",
+        "mid",
+        "mid",
+        "default",
+        "default"
+      ],
+      "description": "2.4m endpoint separation requires root translation even with arbitrary root rotation under conservative complete-chain bound; reference feet do not specify a gait.",
+      "translation_direction": [
+        -1,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "translate_left",
+      "waypoints": [
+        "default",
+        "default",
+        "mid",
+        "mid",
+        "mid",
+        "default",
+        "default"
+      ],
+      "description": "2.4m endpoint separation requires root translation even with arbitrary root rotation under conservative complete-chain bound; reference feet do not specify a gait.",
+      "translation_direction": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "name": "translate_right",
+      "waypoints": [
+        "default",
+        "default",
+        "mid",
+        "mid",
+        "mid",
+        "default",
+        "default"
+      ],
+      "description": "2.4m endpoint separation requires root translation even with arbitrary root rotation under conservative complete-chain bound; reference feet do not specify a gait.",
+      "translation_direction": [
+        0,
+        -1,
+        0
+      ]
+    }
+  ]
+}
