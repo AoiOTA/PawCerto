@@ -2,6 +2,8 @@
 
 1000更新、64例评估及首步限速隔离均已结束。当前没有已验证、保持本轮UMI执行契约且可直接修复迁移失败的代码改动。继续原配方训练不解决已经观察到的执行差异。本页是可审阅的研究选择，不是已运行的新候选，也不增加训练预算。
 
+用户随后选择：**先采用有来源、明确标注未标定项的仿真模型，完成短验证后再确定训练预算。** 因此现在可以准备单个执行器候选和短响应验证；不再把缺少硬件标定作为准备工作的阻塞。下文最小输入表保留物理标定缺口，候选的明确假设见文末。
+
 ## 已有证据与不用重复的工作
 
 - 新通用EE策略的首个非零PD请求在两引擎近乎一致；仅将Lab六个Piper速度界从5改为1000 rad/s，就使首步臂响应接近Mu。该20-solve实验已独立复核，见[完整结果](as2-general-ee-learning-result.md#首步速度约束隔离结果)。
@@ -25,3 +27,36 @@
 在这些输入或明确的仿真假设形成前，不创建虚假的默认电机参数，不更改已有策略评估，不追加优化器更新。输入齐备后，先将唯一候选写成两引擎可消费的参数与离散更新公式，以同初态、同固定输入、名义/满载两个具名资产的短响应判断是否值得进入固定策略测试。窗口、物理步数、通过/停止条件应随具体候选确定；不能在模型尚未定义时承诺某个短测试已足以验证它。
 
 本页不把缺少硬件标定当作仿真研究的禁令。它指出当前必须明确的是执行模型及假设，不能用更多同类诊断或训练次数代替。默认依赖仍是官方未修改的Isaac Lab/PhysX；硬件执行不在范围内。完整框架、满载稳定控制和跨引擎迁移仍未完成。
+
+## 已选方向：有来源的理想MIT位置伺服候选
+
+官方`pyAgxArm`固定提交`e7aef17d54cac80cbaeb1b4110ab3d8f1337a95b`的[MIT接口](https://github.com/agilexrobotics/pyAgxArm/blob/e7aef17d54cac80cbaeb1b4110ab3d8f1337a95b/pyAgxArm/protocols/can_protocol/drivers/piper/default/driver.py#L1145)给出PD加前馈形式：`tau = kp*(q_ref-q) + kd*(qd_ref-qd) + tau_ff`。H驱动继承相应固件实现；这是控制形式来源，不是完整电机模型。候选使用`qd_ref=0`、`tau_ff=0`，两者是合法接口输入，省略协议量化。原UMI实机入口也向ARX5/四足发送位置参考与增益，但这不证明Piper具有相同内部周期或动力学。
+
+| 项目 | 唯一候选的取值/行为 | 来源或假设 |
+|---|---|---|
+| 策略接口 | 保留18维动作、当前offset/scale、20 ms动作及延迟 | 现有UMI配置；不改actor、任务、奖励或PPO来解释响应 |
+| kp/kd | 腿kp=[60,60,60]、kd=[1,1,.25]；臂kp=[80,80,60,15,10,8]、kd=[2,2,1,.03,.15,.02] | 沿用现有未标定AS2仿真增益，未识别硬件值 |
+| 位置参考 | Piper参考按固定资产URDF六轴范围裁剪 | 显式仿真目标约束；不是SDK默认行为或机械限位标定 |
+| 总力矩界 | 腿60/60/90 Nm；臂六轴100 Nm | 源URDF仿真输出界，不是厂商总输出额定 |
+| 未识别动态 | 附加armature/friction取零；不添加torque-speed曲线或内部平滑 | 省略未知项，不声称实际值为零 |
+| 速度约束 | 两端不使用原有不共有的有限关节速度约束 | 显式改变本轮Lab执行契约，不是Piper硬件速度能力声明 |
+| 伺服求解 | 研究两引擎原生隐式PD实现，保持参考更新时钟 | 候选实现；不同于原5 ms外部PD重算后保持力矩，不主张引擎离散数值逐位相等 |
+
+SDK默认`_joint_limits_enabled=False`，[MIT位置输入范围](https://github.com/agilexrobotics/pyAgxArm/blob/e7aef17d54cac80cbaeb1b4110ab3d8f1337a95b/pyAgxArm/protocols/can_protocol/drivers/piper/default/driver.py#L159)因此是±12.5 rad。启用限位后，H preset前五轴与当前URDF仅有舍入差异，但J6为±π，当前资产为±2.0943951 rad。候选明确跟随固定资产，不整体覆盖为新SDK preset。
+
+H各固件的前馈编码范围不同，不能拿来替换上述总力矩界。固定源码的DEFAULT输入界为±[32,20,32,10.294112,10.294112,10.29408] Nm；V183为±[8,8,8,6.05536,6.05536,10.29408]；V188/V189为±[16,16,16,12.11072,12.11072,20.58816]。这些来自[H换算系数](https://github.com/agilexrobotics/pyAgxArm/blob/e7aef17d54cac80cbaeb1b4110ab3d8f1337a95b/pyAgxArm/api/constants.py#L161)及[固件分支](https://github.com/agilexrobotics/pyAgxArm/blob/e7aef17d54cac80cbaeb1b4110ab3d8f1337a95b/docs/piper/firmware_reference.md#L71)，不是连续/峰值扭矩；K/B/C换算系数也不能当减速比或转子惯量。候选FF为零，不假定实际硬件固件。
+
+短验证仅判断固定输入下的数值响应、状态、接触、支撑和跟踪，不调用训练。原UMI的TorqueLimit/EnergyUsage实际消费最后物理步的外部限幅力矩，不能在原生伺服下用零FF或旧pre-state PD请求冒充实际drive effort。原生输出力矩与重构脚力的消费者语义必须在后续可训练性判断中单独核对；此候选尚未成为训练实现。
+
+### 已确定的唯一短验证
+
+本轮采用Lab的`ImplicitActuatorCfg`和MuJoCo 3.13的`position` actuator；Mu显式选择`discrete`、`Newton`及`noslip=0`。Lab读取并确认force-type angular drive，写入位置/零速度/零前馈，关闭原外部PD施力。PhysX的[力矩型隐式驱动](https://nvidia-omniverse.github.io/PhysX/physx/5.5.0/docs/Articulations.html#articulation-joint-drives)提供控制形式依据；引擎求解并非同一算法。Mu饱和时的导数处理也限制隐式求解的结论，不能声称任意增益稳定。
+
+- 两资产：现有名义、20 kg本体＋2 kg载荷；不新增随机化。
+- 每资产两支：始终指向现有默认关节姿态的零动作支，以及“冻结首动作—返回”支。后者复用该资产既有final Lab case0的首动作，经原时钟在0.04–0.10秒执行，然后回到默认参考。全程没有新actor反馈。
+- 每支0.20秒、40个5 ms tick，包含原预热时间。Lab每资产8副本、4+4分支，合计80个world replay solves；Mu四支合计160个replay solves；加上两次Lab原构造初始化，总上限242次实际solve，不追加站稳窗口。
+- Lab关节速度界显式设为1e6 rad/s并读回。它是有限、非物理的实验高界；报告实际速度是否接近该界，不称其为无限或硬件额定。原body速度界及其余物理设置保留。
+- 保存源输入身份、延迟与裁剪前后参考、native关节映射/增益/力矩界/目标、q/qd/root/TCP、接触/支撑、warning和可用的独立力字段。外部actuation输入、近似drive遥测及投影joint force分列。
+- 配置不符、数值warning、时间回退或非有限状态即停止相应条件；不延窗、改参或重跑物理失败。两Lab进程顺序使用独立服务、12 GiB内存和1 GiB swap上限。
+
+该协议验证整个候选组合；即使改善，也不能只归因于隐式积分或MIT模式。0.20秒完成不等于站稳、17秒任务成功、可训练性或WBC验收。实验脚本、执行配置与结果由`outputs/as2-native-servo-probe-20260914/`保存；此处是已授权的执行协议，最终结果另行记录。
