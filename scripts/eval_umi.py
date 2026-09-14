@@ -45,15 +45,18 @@ def main():
         from pawcerto.methods.umi_on_legs.training.evaluation import author_eval_config,evaluate_completed_episodes
         from pawcerto.methods.umi_on_legs.training.semantics import runtime_contract
         random.seed(args.seed);np.random.seed(args.seed);torch.manual_seed(args.seed)
-        config=author_eval_config(load_config(config_path),args.trajectory.resolve(),args.device,args.seed)
+        source_config=load_config(config_path)
         checkpoint=torch.load(checkpoint_path,map_location='cpu',weights_only=False)
+        from pawcerto.methods.umi_on_legs.actuation import require_same_actuation
+        require_same_actuation(source_config,checkpoint.get('config',{}))
+        config=author_eval_config(source_config,args.trajectory.resolve(),args.device,args.seed)
         from pawcerto.methods.umi_on_legs.data_split import configure_selection,evaluation_identity,checkpoint_training_selection
         training_selection=checkpoint_training_selection(checkpoint)
         selection=configure_selection(config,args.trajectory,args.split_manifest,args.partition)
         identity=evaluation_identity(training_selection,selection)
         checkpoint_runtime=checkpoint.get('config',{}).get('pawcerto_runtime')
         config['pawcerto_runtime']=runtime_contract(
-            args.force_signal, config.get('joint_velocity_limit_override_rad_s'))
+            args.force_signal, config.get('joint_velocity_limit_override_rad_s'), config.get('actuation_mode','external-pd'))
         config['evaluation_weights']=dict(checkpoint=str(checkpoint_path.resolve()),
                                          training_pawcerto_runtime=checkpoint_runtime)
         from pawcerto.methods.umi_on_legs.robot_binding import robot_binding,joint_order,require_same_robot
@@ -114,12 +117,15 @@ def main():
                              'EvenMassDistribution explicitly consumes the previous normal-contact foot Fz proxy.')
                           + ' The checkpoint training source is reported separately; missing legacy metadata is not inferred.'))
         metrics=report['metrics']
-        report['author_named_metrics'] = None if metrics is None else {
+        report['author_named_metrics'] = None if metrics is None or env.native_servo else {
             'eval/task/reaching/pos_err/mean':metrics['position_error/mean'],
             'eval/task/reaching/orn_err/mean':metrics['orientation_error/mean'],
             'eval/time_outs/sum':metrics['time_outs/sum'],
             'eval/constraint/energy/sum_electrical_power/mean':metrics['electrical_power/mean'],
             'eval/constraint/energy/sum_joint_energy/mean':metrics['mechanical_power/mean']}
+        if env.native_servo:
+            report['reward_power_note'] = ('Energy reward retains the author formula and sampling using '
+                'servo_effort_prestate_estimate; mechanical/electrical estimates are not measured drive power or energy.')
         (args.output/'summary.json').write_text(json.dumps(report,indent=2,allow_nan=False))
         (args.output/'completed_episodes.json').write_text(json.dumps(episodes,indent=2,allow_nan=False))
         print(json.dumps(report,indent=2,allow_nan=False),flush=True)

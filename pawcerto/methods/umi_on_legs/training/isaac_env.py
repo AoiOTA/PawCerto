@@ -5,6 +5,7 @@ creates the runtime after AppLauncher. Runtime owns physical properties and
 contact observations; this adapter owns tasks, controls, rewards and PPO tensors.
 """
 import torch
+from pawcerto.methods.umi_on_legs.actuation import actuation_mode, AS2_NATIVE_SERVO
 from pawcerto.methods.umi_on_legs import PoseSequence, UmiObservation, UmiController
 from .semantics import (UmiReward, RewardState, critic_observation, termination,
                         emd_force_z, runtime_contract, require_resume_contract)
@@ -17,13 +18,17 @@ class UmiIsaacTrainingEnv:
         self.num_envs = runtime.num_envs
         self.runtime_metadata = dict(config['pawcerto_runtime'])
         self.force_signal = self.runtime_metadata['force_signal']
+        self.actuation_mode = actuation_mode(config)
+        self.native_servo = self.actuation_mode == AS2_NATIVE_SERVO
         velocity_override = config.get('joint_velocity_limit_override_rad_s')
-        if self.runtime_metadata != runtime_contract(self.force_signal, velocity_override):
+        if self.runtime_metadata != runtime_contract(self.force_signal, velocity_override, self.actuation_mode):
             raise ValueError('The adapter requires the current explicit reward/physics runtime contract')
         if getattr(runtime, 'joint_velocity_limit_override_rad_s', None) != velocity_override:
             raise ValueError('Runtime and adapter joint velocity overrides must agree')
         if getattr(runtime, 'force_signal', None) != self.force_signal:
             raise ValueError('Runtime and adapter EMD force_signal must agree')
+        if getattr(runtime, 'actuation_mode', 'external-pd') != self.actuation_mode:
+            raise ValueError('Runtime and adapter actuation modes must agree')
         self.generator = torch.Generator(device=self.device).manual_seed(seed)
         self.seed, self.reset_count, self.global_step = seed, 0, 0
         self.sampler = PoseSequence(trajectory_path, config['env']['tasks']['reaching']['sequence_sampler'], self.device)
@@ -34,6 +39,9 @@ class UmiIsaacTrainingEnv:
         self.initial_kd = self.controller.kd.clone()
         self.controller.kp = self.initial_kp.repeat(self.num_envs,1)
         self.controller.kd = self.initial_kd.repeat(self.num_envs,1)
+        if self.native_servo:
+            self.randomized_kd = self.controller.kd.clone()
+            self._sync_servo_gains(torch.arange(self.num_envs, device=self.device))
         self.reward = UmiReward(config, runtime.body_names, runtime.joint_names, self.num_envs, self.device)
         self.max_episode_length_s = config['env']['cfg']['env']['episode_length_s']
 
@@ -54,6 +62,16 @@ class UmiIsaacTrainingEnv:
                 low, high = rand[f'{name}_ratio_range']
                 ratios = torch.rand((len(ids),18), device=self.device, generator=self.generator)*(high-low)+low
                 getattr(self.controller, name)[ids] = ratios*getattr(self, f'initial_{name}')
+                if self.native_servo and name == 'kd':
+                    self.randomized_kd[ids] = self.controller.kd[ids]
+        if self.native_servo:
+            self._sync_servo_gains(ids)
+
+    def _sync_servo_gains(self, ids):
+        # Each source is retained separately; do not add passive damping twice on reset.
+        damping = self.runtime.training_setup()['dof_damping'][ids]
+        self.controller.kd[ids] = self.randomized_kd[ids] + damping
+        self.runtime.set_servo_gains(self.controller.kp[ids], self.controller.kd[ids], ids)
 
     def _observations(self):
         state = self.runtime.state()
@@ -94,8 +112,7 @@ class UmiIsaacTrainingEnv:
         for substep in range(self.controller.decimation):
             q, qd = self.runtime.joints()
             previous_qd = qd.clone()
-            torque = self.controller.torque(q,qd,substep)
-            self.runtime.step_torque(torque)
+            torque = self.controller.step(self.runtime,q,qd,substep)
         state = self.runtime.state()
         raw = self.runtime.training_state()
         self.observer.advance_pose(state.ee_pose)
@@ -138,8 +155,7 @@ class UmiIsaacTrainingEnv:
         for substep in range(self.controller.decimation):
             q, qd = self.runtime.joints()
             previous_qd = qd.clone()
-            torque = self.controller.torque(q,qd,substep)
-            self.runtime.step_torque(torque)
+            torque = self.controller.step(self.runtime,q,qd,substep)
             state = self.runtime.state()
             raw = self.runtime.training_state()
             self.observer.advance_pose(state.ee_pose)
@@ -173,11 +189,13 @@ class UmiIsaacTrainingEnv:
                     sub_stats[f'ground_foot_force_z_{leg}'] = ground_force_z[:,index]
             energy = self.config['env']['constraints'].get('energy')
             if energy is not None:
-                sub_stats['mechanical_power'] = (torque*state.dof_vel).sum(-1)
+                mechanical_key = 'servo_mechanical_power_estimate' if self.native_servo else 'mechanical_power'
+                electrical_key = 'servo_electrical_power_estimate' if self.native_servo else 'electrical_power'
+                sub_stats[mechanical_key] = (torque*state.dof_vel).sum(-1)
                 constants = torque.new_tensor(energy['torque_constant']['data'])
                 voltage = torque.new_tensor(energy['voltage']['data'])
                 # Preserve the author's reported electrical-power estimator.
-                sub_stats['electrical_power'] = (torque.abs()*constants*voltage).sum(-1)
+                sub_stats[electrical_key] = (torque.abs()*constants*voltage).sum(-1)
             for key,value in sub_stats.items():
                 stats[key] = (stats.get(key,0.)*substep+value)/(substep+1)
             min_up_dot = torch.minimum(min_up_dot,-state.local_root_gravity[:,2])
@@ -195,9 +213,15 @@ class UmiIsaacTrainingEnv:
         return actor,critic,reward,done,info
 
     def training_state_dict(self):
-        return dict(curriculum=self.reward.curriculum.state_dict(), global_step=self.global_step,
+        state = dict(curriculum=self.reward.curriculum.state_dict(), global_step=self.global_step,
                     reset_count=self.reset_count, generator_state=self.generator.get_state(),
                     pawcerto_runtime=dict(self.runtime_metadata))
+        if self.native_servo:
+            state['native_servo_gain_samples'] = dict(kp=self.controller.kp.clone(),
+                randomized_kd=self.randomized_kd.clone(),
+                sampled_dof_damping=self.runtime.training_setup()['dof_damping'].clone(),
+                effective_kd=self.controller.kd.clone())
+        return state
 
     def load_training_state_dict(self,state):
         require_resume_contract(state.get('pawcerto_runtime'),self.runtime_metadata)

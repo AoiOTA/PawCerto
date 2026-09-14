@@ -89,6 +89,13 @@ try:
                 value = getattr(controller, gain)
                 setattr(controller, gain, value * (torch.rand((args.num_envs, 18), device=args.device) * (high-low) + low))
             noise_generator = torch.Generator(device=args.device).manual_seed(args.seed)
+        if controller.native_servo:
+            kp = controller.kp.expand(args.num_envs, -1)
+            kd = controller.kd.expand(args.num_envs, -1)
+            if args.domain_randomization:
+                kd = kd + env.training_setup()['dof_damping']
+            controller.kp, controller.kd = kp, kd
+            env.set_servo_gains(kp, kd)
         rows = []
         dense_samples = [0]
         if args.contact_summary:
@@ -108,7 +115,7 @@ try:
                 i = args.trace_case
                 indices = torch.ceil((controller.delay_steps - substep) / controller.decimation).long()
                 executed = controller.buffer.permute(2, 1, 0)[torch.arange(len(indices), device=args.device), indices].T
-                target = controller.offset + controller.scale * executed
+                target = controller.position_target(substep)
                 row = {'checkpoint': str(checkpoint), 'case': i, 'policy_step': policy_step,
                        'substep': substep, 'time_before_s': float(env.time[i]),
                        'q_before': q[i].tolist(), 'qd_before': qd[i].tolist(),
@@ -116,7 +123,13 @@ try:
                        'executed_action': executed[i].tolist(), 'joint_target': target[i].tolist(),
                        'torque_before_limit': (controller.kp * (target - q) - controller.kd * qd)[i].tolist(),
                        'torque_applied': torque[i].tolist()}
-            env.step_torque(torque)
+                if controller.native_servo:
+                    row['servo_effort_prestate_estimate'] = row.pop('torque_applied')
+                    row['servo_effort_prestate_before_limit'] = row.pop('torque_before_limit')
+            if controller.native_servo:
+                env.step_servo(controller.position_target(substep))
+            else:
+                env.step_torque(torque)
             if args.contact_summary or trace_stream is not None:
                 readout = env.training_state()
                 state = env.state()

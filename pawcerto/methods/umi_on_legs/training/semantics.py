@@ -12,10 +12,30 @@ import torch
 FORCE_SIGNALS = ('reconstructed-solver', 'normal-contact')
 
 
-def runtime_contract(force_signal, joint_velocity_limit_override_rad_s=None):
+def runtime_contract(force_signal, joint_velocity_limit_override_rad_s=None, actuation_mode='external-pd'):
     """Minimal reward/physics provenance saved in both config and checkpoints."""
     if force_signal not in FORCE_SIGNALS:
         raise ValueError(f'Unsupported EMD force signal: {force_signal}')
+    if actuation_mode not in ('external-pd', 'as2-native-servo'):
+        raise ValueError(f'Unsupported UMI actuation mode: {actuation_mode}')
+    if actuation_mode == 'as2-native-servo':
+        if force_signal != 'normal-contact':
+            raise ValueError('AS2 native servo requires explicit normal-contact EMD; '
+                             'reconstructed-solver residual contains native drive forces')
+        if joint_velocity_limit_override_rad_s != 1e6:
+            raise ValueError('AS2 native servo requires the explicit 1000000 rad/s velocity bound')
+        return dict(force_signal=force_signal, physics_revision='as2-native-servo-v1',
+                    actuation_mode=actuation_mode,
+                    joint_friction_model='physx-legacy-friction-coefficient',
+                    joint_velocity_limit_override_rad_s=1e6,
+                    effort_semantics='servo_effort_prestate_estimate',
+                    effort_sample='clip(kp*(qref-qpre)-kd*qdpre,source_effort_limit)',
+                    piper_reference='source-urdf-position-clipped-after-action-delay',
+                    velocity_reference=0., feedforward_effort=0.,
+                    damping_semantics='effective-kd=reset-randomized-kd+sampled-dof-damping; combined drive is effort-limited',
+                    lab_drive='native-force-pd',
+                    mujoco_integrator='discrete', mujoco_solver='Newton', mujoco_noslip_iterations=0,
+                    emd_input='normal-contact-world-z; not total tangential contact force')
     contract = dict(force_signal=force_signal,
                     physics_revision='umi-physics-mapping-v3',
                     joint_friction_model='physx-legacy-friction-coefficient')
@@ -68,7 +88,7 @@ class RewardState:
     dof_pos: torch.Tensor                 # [N,18], official DOF order
     dof_vel: torch.Tensor                 # [N,18]
     prev_dof_vel: torch.Tensor            # previous PHYSICS substep, not control step
-    torque: torch.Tensor                  # applied/clamped torque, final substep
+    torque: torch.Tensor                  # external clamped torque or explicit native prestate estimate
     action: torch.Tensor                  # raw action, before target scaling
     prev_action: torch.Tensor
     local_root_gravity: torch.Tensor      # normalized gravity, body frame [N,3]

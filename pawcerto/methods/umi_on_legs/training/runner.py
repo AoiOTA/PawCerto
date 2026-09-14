@@ -159,6 +159,9 @@ class UmiTrainer:
     def load(self, path, load_optimizer=True):
         # Load RNG ByteTensors on CPU even when training is on CUDA.
         state = torch.load(path, map_location='cpu', weights_only=False)
+        if load_optimizer:
+            from pawcerto.methods.umi_on_legs.actuation import require_same_actuation
+            require_same_actuation(self.config, state.get('config', {}))
         if load_optimizer and self.runtime_metadata is not None:
             require_resume_contract(state.get('config',{}).get('pawcerto_runtime'),
                                     self.runtime_metadata)

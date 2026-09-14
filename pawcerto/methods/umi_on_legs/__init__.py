@@ -157,6 +157,11 @@ class UmiObservation:
 
 class UmiController:
     def __init__(self, config, batch_size, device="cpu"):
+        from .actuation import actuation_mode, piper_target_limits, AS2_NATIVE_SERVO
+        self.actuation_mode = actuation_mode(config)
+        self.native_servo = self.actuation_mode == AS2_NATIVE_SERVO
+        bounds = piper_target_limits(config)
+        self.piper_limits = None if bounds is None else torch.tensor(bounds, device=device)
         self.device = device
         env = config['env']
         ctrl = env['controller']
@@ -178,11 +183,27 @@ class UmiController:
         action = action.clamp(-self.max_action, self.max_action)
         self.buffer = torch.cat((action[:, None], self.buffer[:, :-1]), 1)
 
-    def torque(self, dof_pos, dof_vel, substep):
+    def position_target(self, substep):
         indices = torch.ceil((self.delay_steps - substep) / self.decimation).long()
         action = self.buffer.permute(2, 1, 0)[torch.arange(len(indices), device=self.device), indices].T
         target = self.offset + self.scale * action
+        if self.piper_limits is not None:
+            target[:, 12:] = target[:, 12:].clamp(self.piper_limits[0], self.piper_limits[1])
+        return target
+
+    def torque(self, dof_pos, dof_vel, substep):
+        """External effort or native servo pre-state estimate, selected explicitly."""
+        target = self.position_target(substep)
         return (self.kp * (target - dof_pos) - self.kd * dof_vel).clamp(-self.torque_limit, self.torque_limit)
+
+    def step(self, runtime, dof_pos, dof_vel, substep):
+        """Keep the original 5 ms sampling while dispatching the selected actuator."""
+        effort = self.torque(dof_pos, dof_vel, substep)
+        if self.native_servo:
+            runtime.step_servo(self.position_target(substep))
+        else:
+            runtime.step_torque(effort)
+        return effort
 
 
 class UmiPolicy:
@@ -201,6 +222,13 @@ class UmiPolicy:
         self.training_runtime = None
         self.source_config = file_identity(directory / 'config.json')
         if source.is_dir() and (directory / 'actor.ts').exists():
+            from .actuation import actuation_mode, AS2_NATIVE_SERVO
+            provenance_path = directory / 'export.json'
+            provenance = json.loads(provenance_path.read_text()) if provenance_path.exists() else {}
+            if (actuation_mode(self.config) == AS2_NATIVE_SERVO
+                    or provenance.get('execution_actuation_mode') == AS2_NATIVE_SERVO):
+                if provenance.get('execution_config', {}).get('sha256') != self.source_config['sha256']:
+                    raise ValueError('Native-servo export execution config differs from its saved identity')
             self.source_weights = file_identity(directory / 'actor.ts')
             self.actor = torch.jit.load(str(directory / 'actor.ts'), map_location=device).eval()
         else:
@@ -215,6 +243,8 @@ class UmiPolicy:
             checkpoint = torch.load(weights_path, map_location='cpu', weights_only=False)
             from .robot_binding import require_same_robot
             require_same_robot(self.config, checkpoint.get('config', {}))
+            from .actuation import require_same_actuation
+            require_same_actuation(self.config, checkpoint.get('config', {}))
             from .data_split import checkpoint_training_selection
             self.training_selection = checkpoint_training_selection(checkpoint)
             self.training_asset = checkpoint.get('config', {}).get('pawcerto_asset')
@@ -263,6 +293,9 @@ class UmiPolicy:
             'checkpoint_training_selection': self.training_selection,
             'checkpoint_training_asset': self.training_asset,
             'checkpoint_training_runtime': self.training_runtime,
+            'execution_runtime': self.config.get('pawcerto_runtime'),
+            'execution_actuation_mode': self.config.get('actuation_mode', 'external-pd'),
+            'execution_config': file_identity(output_dir / 'config.json'),
         }
         (output_dir / 'export.json').write_text(json.dumps(provenance, indent=2) + '\n')
         return {'output': str(output_dir), 'max_actor_error': (actual - expected).abs().max().item(),

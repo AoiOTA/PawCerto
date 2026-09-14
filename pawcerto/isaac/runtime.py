@@ -5,7 +5,7 @@ import xml.etree.ElementTree as ET
 import torch
 import isaaclab.sim as sim_utils
 from isaaclab.assets import ArticulationCfg, AssetBaseCfg
-from isaaclab.actuators import IdealPDActuatorCfg
+from isaaclab.actuators import IdealPDActuatorCfg, ImplicitActuatorCfg
 from isaaclab.scene import InteractiveScene, InteractiveSceneCfg
 from isaaclab.utils import configclass
 from isaaclab.utils.math import matrix_from_quat, quat_from_euler_xyz, quat_mul
@@ -14,6 +14,7 @@ from pawcerto.methods.umi_on_legs import RobotState
 from pawcerto.methods.umi_on_legs.training.semantics import runtime_contract
 from pawcerto.robots.urdf import read_joint_limits
 from pawcerto.methods.umi_on_legs.robot_binding import robot_binding, joint_order
+from pawcerto.methods.umi_on_legs.actuation import actuation_mode, AS2_NATIVE_SERVO, piper_target_limits
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_USD = ROOT / 'reference/isaac/go2_arx5/usd_path.txt'
@@ -65,8 +66,10 @@ class Go2Arx5Isaac:
         if force_signal not in ("normal-contact", "reconstructed-solver"):
             raise ValueError(f"Unknown force signal: {force_signal}")
         self.force_signal = force_signal
+        self.actuation_mode = actuation_mode(config)
+        self.native_servo = self.actuation_mode == AS2_NATIVE_SERVO
         self.joint_velocity_limit_override_rad_s = config.get('joint_velocity_limit_override_rad_s')
-        runtime_contract(force_signal, self.joint_velocity_limit_override_rad_s)
+        runtime_contract(force_signal, self.joint_velocity_limit_override_rad_s, self.actuation_mode)
         self.binding = robot_binding(config)
         if list(joint_names) != joint_order(config):
             raise ValueError('Runtime joint order differs from UMI robot binding')
@@ -95,12 +98,32 @@ class Go2Arx5Isaac:
         asset = ET.parse(self.urdf_path)
         joints = asset.findall('joint')
         source_limits = read_joint_limits(self.urdf_path, joint_names)
+        if self.native_servo:
+            lower, upper = piper_target_limits(config)
+            expected = [[source_limits[n][k] for n in joint_names[12:]] for k in ('lower', 'upper')]
+            if [lower, upper] != expected:
+                raise ValueError('Saved Piper reference bounds differ from the actual source URDF')
+            ctrl = config['env']['controller']
+            if ctrl['torque_limit']['data'] != [source_limits[n]['effort'] for n in joint_names]:
+                raise ValueError('Native servo effort bounds must match the actual source URDF')
+            self.piper_limits = torch.tensor(expected, device=device)
         velocity_limits = {}
         for name in joint_names:
             velocity = source_limits[name]['velocity']
             if not math.isfinite(velocity) or velocity <= 0:
                 raise ValueError(f'Invalid original URDF velocity limit for {name}: {velocity}')
             velocity_limits[name] = velocity
+
+        actuator = (ImplicitActuatorCfg(joint_names_expr=['.*'],
+                        stiffness=dict(zip(joint_names, ctrl['kp']['data'])),
+                        damping=dict(zip(joint_names, ctrl['kd']['data'])),
+                        joint_effort_limit=dict(zip(joint_names, ctrl['torque_limit']['data'])),
+                        joint_velocity_limit=1e6, actuator_velocity_limit=velocity_limits,
+                        armature=0., friction=0., dynamic_friction=0., viscous_friction=0.)
+                    if self.native_servo else
+                    IdealPDActuatorCfg(joint_names_expr=['.*'], stiffness=0., damping=0.,
+                        effort_limit=1e9, effort_limit_sim=1e9, velocity_limit_sim=velocity_limits,
+                        armature=0., friction=0., dynamic_friction=0., viscous_friction=0.))
 
         @configclass
         class SceneCfg(InteractiveSceneCfg):
@@ -122,9 +145,7 @@ class Go2Arx5Isaac:
                         solver_position_iteration_count=4, solver_velocity_iteration_count=0)),
                 init_state=ArticulationCfg.InitialStateCfg(pos=tuple(initial['pos']),
                     rot=initial_rotation, joint_pos=dict(zip(joint_names, offset))),
-                actuators={'effort': IdealPDActuatorCfg(joint_names_expr=['.*'], stiffness=0., damping=0.,
-                    effort_limit=1e9, effort_limit_sim=1e9, velocity_limit_sim=velocity_limits, armature=0.,
-                    friction=0., dynamic_friction=0., viscous_friction=0.)})
+                actuators={'effort': actuator})
 
         self.sim = sim_utils.SimulationContext(sim_utils.SimulationCfg(
             dt=self.dt, device=device,
@@ -202,11 +223,17 @@ class Go2Arx5Isaac:
         if self.joint_velocity_limit_override_rad_s is not None:
             import warp as wp
             self.robot.write_joint_velocity_limit_to_sim_index(
-                limits=torch.full((num_envs, len(joint_names)), 1000., device=device),
+                limits=torch.full((num_envs, len(joint_names)), self.joint_velocity_limit_override_rad_s, device=device),
                 joint_ids=self.joint_ids)
             native_limits = wp.to_torch(self.robot.root_view.get_dof_max_velocities())
-            if not bool(torch.all(native_limits[:, self.joint_ids] == 1000.)):
-                raise RuntimeError('Native joint velocity override readback differs from 1000 rad/s')
+            if not bool(torch.all(native_limits[:, self.joint_ids] == self.joint_velocity_limit_override_rad_s)):
+                raise RuntimeError('Native joint velocity override readback differs from its explicit value')
+        if self.native_servo:
+            for paths in self.robot.root_view.dof_paths:
+                for path in paths:
+                    drive = self.sim.stage.GetPrimAtPath(path).GetAttribute('drive:angular:physics:type').Get()
+                    if drive != 'force':
+                        raise ValueError('AS2 native servo requires source force-type angular drives')
         self._solver_force_valid = torch.zeros(num_envs, dtype=torch.bool, device=device)
         self._feet_solver_force_z = None
         if force_signal == 'reconstructed-solver':
@@ -407,6 +434,31 @@ class Go2Arx5Isaac:
 
     @torch.no_grad()
     def step_torque(self, torque):
+        if self.native_servo:
+            raise ValueError('Native servo must receive a position reference, not an external PD effort')
+        self._step_effort(torque)
+
+    @torch.no_grad()
+    def set_servo_gains(self, kp, kd, env_ids=None):
+        """Synchronize actual effective gains; caller owns the separate DR samples."""
+        if not self.native_servo:
+            raise ValueError('Servo gains are only valid for the explicit AS2 native mode')
+        self.robot.write_joint_stiffness_to_sim_index(stiffness=kp.contiguous(), joint_ids=self.joint_ids, env_ids=env_ids)
+        self.robot.write_joint_damping_to_sim_index(damping=kd.contiguous(), joint_ids=self.joint_ids, env_ids=env_ids)
+
+    @torch.no_grad()
+    def step_servo(self, target):
+        if not self.native_servo:
+            raise ValueError('Position servo requires explicit AS2 native mode')
+        target = target.to(self.device).clone()
+        target[:, 12:] = target[:, 12:].clamp(self.piper_limits[0], self.piper_limits[1])
+        zero = torch.zeros_like(target)
+        self.robot.set_joint_position_target_index(target=target.contiguous(), joint_ids=self.joint_ids)
+        self.robot.set_joint_velocity_target_index(target=zero, joint_ids=self.joint_ids)
+        self._step_effort(zero)
+
+    @torch.no_grad()
+    def _step_effort(self, torque):
         self._solver_force_valid[:] = False
         reconstructed = self.force_signal == 'reconstructed-solver'
         if reconstructed:

@@ -27,7 +27,7 @@ def evaluate(checkpoint_dir, trajectory_path, seconds=17., seed=0, *, policy=Non
     policy = UmiPolicy(checkpoint_dir) if policy is None else policy
     source = Path(checkpoint_dir)
     config_dir = source.parent if source.is_file() else source
-    sim = Go2Arx5Mujoco(config_dir / 'config.json', model_path=model_path)
+    sim = Go2Arx5Mujoco(policy.config, model_path=model_path)
     model_identity = file_identity(model_path or sim.binding['mujoco_path'])
     if positions is None:
         positions, rotations = policy.trajectories(trajectory_path).sample(1, seed)
@@ -91,9 +91,12 @@ def evaluate(checkpoint_dir, trajectory_path, seconds=17., seed=0, *, policy=Non
                             physical_columns=np.asarray(['ee_pos:0:3', 'ee_rotmat:3:12', 'target_pos:12:15',
                                 'target_rotmat:15:24', 'root_pos:24:27', 'root_rotmat:27:36',
                                 'joint_pos:36:54', 'joint_vel:54:72', 'raw_action:72:90',
-                                'last_substep_torque:90:108', 'FR_FL_RR_RL_force_z:108:112']))
+                                ('servo_effort_prestate_estimate:90:108' if sim.native_servo else 'last_substep_torque:90:108'),
+                                'FR_FL_RR_RL_force_z:108:112']))
     return {'checkpoint': str(checkpoint_dir), 'trajectory': str(trajectory_path), 'seed': seed,
             'mujoco_asset': model_identity,
+            'actuation_mode': sim.actuation_mode,
+            'effort_semantics': 'servo_effort_prestate_estimate' if sim.native_servo else 'external-clamped-effort',
             'joint_names': list(sim.joint_names), 'seconds': float(values[-1,0]),
             'requested_seconds': seconds, 'completion_status': 'invalid' if failure else 'complete',
             'metrics_scope': 'pre_failure_prefix' if failure else 'complete_episode',

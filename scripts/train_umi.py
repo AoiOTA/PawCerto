@@ -75,7 +75,7 @@ def main():
         config['seed']=args.seed
         config['env']['cfg']['env']['num_envs']=args.num_envs
         config['pawcerto_runtime']=runtime_contract(
-            args.force_signal, config.get('joint_velocity_limit_override_rad_s'))
+            args.force_signal, config.get('joint_velocity_limit_override_rad_s'), config.get('actuation_mode','external-pd'))
         source_runtime=None
         if source_path:
             source_selection=source_checkpoint.get('config',{}).get('env',{}).get('tasks',{}).get('reaching',{}).get('sequence_sampler',{}).get('trajectory_selection')
