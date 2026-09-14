@@ -1,6 +1,6 @@
 # Current development status
 
-Current priority: preserve the completed AS2 general-EE candidate and resolve its remaining control-execution differences from evidence. RoboDuet has completed its original 50000-update budget and final evaluation with a negative stable-control result.
+Current priority: preserve the completed AS2 general-EE candidate and resolve its remaining control-execution differences from evidence. A 20-solve, zero-optimizer replay now isolates native Piper velocity enforcement as a cause of the first-tick arm response difference: raising only Lab's six arm limits from 5 to 1000 rad/s produces peaks close to MuJoCo. This does not establish the full numerical-failure cause or a transferable controller; see the [bounded causal result](as2-general-ee-learning-result.md#首步速度约束隔离结果). RoboDuet has completed its original 50000-update budget and final evaluation with a negative stable-control result.
 The earlier AS2 EDU/Piper H candidates also ended with failed stable-control
 and transfer results; the new budget is explicitly separate. DeepWBC's bounded 21-update/export/500-step path and source
 delivery are complete; its learning outcome remains unproved. Hardware execution

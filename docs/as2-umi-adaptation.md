@@ -20,6 +20,20 @@ The source is [configs/as2_piper.json](../configs/as2_piper.json) and the assemb
 
 UMI task/history, trajectory pool and sampling, pose latency, 20 ms control delay, four 5 ms substeps per policy action, action clipping, reward formulas/weights, curriculum, PPO and evaluation semantics are retained. Physical joint-limit arrays, observation offsets, relevant named-body references and the root-height target are adapted explicitly. `aligned_body_ee` uses Piper joints 1 and 5 with their nominal offsets, rather than Go2 zero assumptions.
 
+### Velocity-constraint contract and transfer limitation
+
+The AS2 paths do not currently share the same velocity-constraint semantics:
+
+| Quantity | Official Lab/PhysX AS2 path | MuJoCo AS2 direct-torque path |
+|---|---|---|
+| Controller effort bound | Source-derived leg 60/60/90 Nm and Piper 100 Nm request clipping | Same source-derived request clipping |
+| Joint speed | Native source limits: hip/thigh 24, calf 16, Piper 5 rad/s | No corresponding solver joint-speed constraint in this path |
+| Effort evidence | Native actuation getter reads the input channel; projected incoming joint forces are separate | Saved requested and sent torque are input-channel values |
+
+The [2026-09-14 first-tick intervention](as2-general-ee-learning-result.md#首步速度约束隔离结果) confirms that this difference affects actual arm dynamics. Under identical sent efforts, changing only six Piper limits from 5 to 1000 rad/s raises Lab's 0.045-second arm peak to 98.729/62.835 rad/s for nominal/loaded assets, close to MuJoCo's 98.869/63.035. This is a diagnostic intervention, not a new default or a physical Piper speed specification. The original limits were restored.
+
+Matching observations, actions, export outputs and controller torque therefore does not establish equivalent physical execution. The current general-EE final policy fails all 16 MuJoCo cases numerically before the movement phase. This first-tick result does not establish the complete failure cause; it neither justifies post-integration velocity clipping in MuJoCo nor establishes a production fix. A future transfer candidate needs an explicitly selected common actuator/constraint model and bounded fixed-input validation before learning changes. Independent motor solver effort, a calibrated hardware actuator model and stable full-load transfer remain unverified. Default dependencies remain official, unmodified Isaac Lab and PhysX.
+
 ## Commands
 
 Prepare without Isaac or GPU:
