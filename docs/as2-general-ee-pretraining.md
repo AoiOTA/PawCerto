@@ -61,4 +61,4 @@ python scripts/build_as2_ee_tasks.py \
 
 记录器仅为正式runtime未建sensor的4个无collision髋body保留与原training_state一致的false接触值；可碰撞body仍直接读取sensor，缺失会报错。该修复未改变原termination、物理、奖励或PPO。第二次进程09:05:35启动，独立service实际MemoryHigh/Max为12 GiB、Swap上限1 GiB；启动里程碑已完成45/1000更新，约1.56–1.59秒/更新。
 
-两次model0的全部actor/critic参数和CPU RNG逐元素相等，均为0更新、空Adam的新初始化，未继承旧策略。实际coverage已保存1024个策略端点、每个端点固定22环境，8个源任务ID均出现，字段及资产读回有限；这不是所有1024训练环境或全部任务×资产×伸展组合的覆盖证明。首轮完整27秒进程时间保守计入预算，恢复进程最多5373训练循环秒或1000总更新，未扩预算。证据保存在`runs/as2_general_ee_seed0_1024_1000_20260913/`的启动审计及尝试日志中。此节记录启动证据，训练终点和64case评估结果仍待完成。
+两次model0的全部actor/critic参数和CPU RNG逐元素相等，均为0更新、空Adam的新初始化，未继承旧策略。实际coverage已保存1024个策略端点、每个端点固定22环境，8个源任务ID均出现，字段及资产读回有限；这不是所有1024训练环境或全部任务×资产×伸展组合的覆盖证明。首轮完整27秒进程时间保守计入预算，恢复进程最多5373训练循环秒或1000总更新，未扩预算。证据保存在`runs/as2_general_ee_seed0_1024_1000_20260913/`的启动审计及尝试日志中。此节保留启动证据；训练终点、64case评估及最终覆盖分析现已完成，见[完整结果](as2-general-ee-learning-result.md)。名义Lab有局部任务改善，满载和MuJoCo迁移仍失败。
