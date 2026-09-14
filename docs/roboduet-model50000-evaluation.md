@@ -23,3 +23,35 @@ Local evidence under `outputs/roboduet-fixed-evaluation-20260912/`: `model_50000
 Stop boundary reached: no additional optimizer updates, tuning, replacement protocol or new AS2 learning was started. No production source was edited for this endpoint.
 
 Protocol and previous comparisons: [fixed evaluation](roboduet-evaluation.md), [model 0/1600](roboduet-evaluation-result.md), [model 10001](roboduet-model10001-evaluation.md). The separate AS2 general-EE learning budget does not extend this RoboDuet candidate.
+
+## Bounded CPU diagnosis of the first saturated actions
+
+A subsequent read-only examination of the nine saved first policy inputs found
+no actionable evaluation-port contract mismatch. The 15 relevant source files
+match the recorded evaluation launch closure. Initial arm observations have
+maximum absolute value 0.5 and dog observations at most 1, yet the final policy's
+per-case maximum physical arm output is 55.76–222.68 and dog output is
+37.74–164.71. At the first action, 11–17 of 18 dimensions saturate at ±10.
+All nine first non-initialization physical substeps contain exactly the saved
+policy output clamped to that range. The earliest observed large action is
+therefore already in the policy mean, rather than an extra downstream scale
+or permutation.
+
+The inherited training/playback difference in the two arm guidance dimensions
+was examined on the same saved inputs. Replacing raw guidance with its training
+tanh form leaves the six physical arm outputs unchanged and changes dog outputs
+by at most 0.0003356934, with unchanged saturation counts: the existing plan
+already clips both guidance forms to nearly identical limits. Removing the
+duplicate initial arm history frame, which is also present in upstream playback,
+instead gives maximum physical arm outputs of 290.49–301.90; all six arm
+dimensions and 6–10 dog dimensions still saturate. Neither comparison supports
+changing that contract to repair this observed failure.
+
+This uses the recorded `policy_inputs_outputs.pt` and `substeps.pt` for all three
+seeds, the existing `official_play`/`training_mean` implementations and the
+fixed upstream playback/training sources. No new simulator steps, optimizer
+updates or production edits were made. These CPU comparisons identify where
+the first failure manifests; they do not establish why training produced the
+large means, prove complete physics equivalence, or substitute for a replay of
+alternative stochastic trajectories. The negative endpoint and stop boundary
+remain unchanged.
