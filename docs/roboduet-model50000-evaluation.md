@@ -55,3 +55,41 @@ the first failure manifests; they do not establish why training produced the
 large means, prove complete physics equivalence, or substitute for a replay of
 alternative stochastic trajectories. The negative endpoint and stop boundary
 remain unchanged.
+
+## Location of output growth in the existing checkpoints
+
+The same nine final first-step observation/history inputs were also replayed on
+four existing checkpoints, on CPU without generating new guidance or physical
+states. The severe mean growth lies between checkpoints 10001 and 50000, after
+arm optimization begins in Stage2; these four samples do not identify its first
+iteration within that interval.
+
+| Checkpoint | Arm updates | Dog max absolute mean | Dog saturated dimensions /108 | Arm physical max absolute mean | Arm saturated dimensions /54 | Dog / arm mean std |
+|---|---:|---:|---:|---:|---:|---:|
+|0|0|0.1168|0|0.1231|0|1.000 /0.100|
+|1600|0|1.6837|0|0.1231|0|1.394 /0.100|
+|10001|0|2.8371|0|0.1231|0|2.525 /0.100|
+|50000|39999|164.7111|88|222.6786|47|8.093 /73.211|
+
+The final arm std parameters range 65.93–89.62. These are checkpoint parameters,
+not reconstructed log values. The shared inputs contain final Stage2 guidance;
+the earlier checkpoints' rows are therefore fixed-input diagnostics, not their
+own closed-loop or Stage1 behavior results.
+
+Existing training metrics show earlier degradation: during iterations 1600–10000,
+dog learning rate is always 1e-5 and mean dog reward is 1.2175e-9. Mean done_count
+is 1088.73 per update in that window, 9618.01 in the first 999 Stage2 updates and
+12980.05 in the final 1000 updates. Final-window dog/arm mean rewards are about
+5.23e-43/9.22e-45; both are zero in the final row. Dog learning rate remains 1e-5
+through Stage2; the saved arm rate spans 1e-5–0.01. These are end-of-update rates,
+not all minibatch rates. Done_count sums termination events across 4096 environments
+and 24 rollout steps, so it is neither unique failed environments nor completed
+episode length.
+
+The metrics contain rewards, rates and losses but no actual KL, entropy, std
+time series or completed-episode-length series. The second logged loss is the
+surrogate loss, not the combined value/entropy objective. A learning-rate floor
+does not establish a KL value. The observations locate deterioration and output
+growth; they do not establish entropy, reward scale, physics or an implementation
+defect as its cause. No algorithm change or further RoboDuet run follows from
+this bounded diagnosis.
