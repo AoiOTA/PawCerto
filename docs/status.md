@@ -1,19 +1,21 @@
 # Current development status
 
-Current priority: complete the authorized RoboDuet learning and evaluation run.
-The AS2 EDU/Piper H one-candidate experiment has ended with failed stable-control
-and transfer results; no further AS2 experiment is automatically included. DeepWBC's bounded 21-update/export/500-step path and source
+Current priority: execute the separately authorized AS2 general-EE pretraining candidate after publishing this progress snapshot. RoboDuet has completed its original 50000-update budget and final evaluation with a negative stable-control result.
+The earlier AS2 EDU/Piper H candidates also ended with failed stable-control
+and transfer results; the new budget is explicitly separate. DeepWBC's bounded 21-update/export/500-step path and source
 delivery are complete; its learning outcome remains unproved. Hardware execution
 remains outside scope. UniFP and Learning Force Control now have bounded Lab
 integration at the evidence levels below; full force-control
 learning and the remaining method integrations are unfinished.
 See [the updated sequence](project-plan.md#updated-execution-priority-2026-09-12).
 
-On 2026-09-13 the user separately authorized one [rail-mounted AS2 adaptation](as2-pretraining-family.md): initialize actor/std from the old AS2 model 4000, use a fresh critic/optimizer, and train seed 0 on the six target assets with 1024 environments × 24 rollout steps, stopping after 1000 new updates or 90 minutes of training-loop time at a completed-update boundary. Matched model-0/final Lab and MuJoCo fixed16 evaluations follow. Asset consumption and exact actor-copy parity are complete; new learning/transfer results remain pending. The source actor's earlier instability is retained, and the old 4000-update experiment is not extended or relabeled.
+The [rail-mounted AS2 adaptation](as2-pretraining-family.md) completed its separately authorized 1024×24×1000 updates in 55.37 minutes and all model0/final×nominal/loaded×Lab/Mu evaluations. Nominal Lab EE tracking/support regressed, and every MuJoCo case failed numerically; this did not establish stable transferred control. The old 4000-update experiment remains separate.
+
+On 2026-09-14 the user approved the [AS2 general-EE candidate](as2-general-ee-pretraining.md): fresh seed0 actor/critic/optimizer, 1024 environments ×24 rollout steps, at most 1000 updates or 5400 training-loop seconds, whichever boundary arrives first. The fixed model0/final ×8 tasks ×nominal/20 kg-body+2 kg-payload ×Lab/MuJoCo evaluation has 64 base cases. At this publication snapshot it is authorized but not started; the user requested pushing current progress first. No learning result is inferred from the completed 22-asset consumption, task generation or COM reconstruction.
 
 
-RoboDuet's seed-0, 4096-environment, 50000-update learning experiment has begun
-real PPO updates after an initialization-memory repair. The first two attempts
+RoboDuet's seed-0, 4096-environment learning experiment completed exactly
+50000 updates, 4,915,200,000 transitions and 39,999 arm updates after an initialization-memory repair. The first two attempts
 did not produce updates: one was killed by kernel OOM and another coincided
 with systemd-oomd terminating the desktop application's shared process group.
 The repaired run preserves collision-geometry sharing and runs in an independent
@@ -25,9 +27,7 @@ ablation. The [10001 stage-boundary evaluation](roboduet-model10001-evaluation.m
 also completed with 9/9 low-height terminations at 0.10–0.40 seconds. On the
 three-model common prefixes, EE position and yaw tracking regressed despite
 smaller aggregate linear-velocity error. The checkpoint still has zero arm
-updates; subsequent training has entered Stage 2. Full learning and the 50000
-endpoint remain pending. See the [early physical readout and video](roboduet-evaluation-result.md)
-and the [stage-boundary comparison](roboduet-model10001-evaluation.md).
+updates. The [final model50000 evaluation](roboduet-model50000-evaluation.md) now completes the original experiment: 0/9 full 20-second cases, all nine height terminations within 0.10–0.28 seconds. Final weights/four optimizer states are finite and the five exported modules match every saved real policy input exactly; these checks do not establish learned control. Per-case action-clipping fractions are 89.8–96.3%. The stop boundary is reached without automatically adding updates or tuning. See also the [early physical readout and video](roboduet-evaluation-result.md) and [stage-boundary comparison](roboduet-model10001-evaluation.md).
 
 DeepWBC's corrected complete terrain run finished 21 updates and a fixed 500-step physical evaluation, with contact in all 500 samples. EE RMSE was 0.47936 m and forward-velocity MAE 0.49878 m/s; one signed-roll failure was followed by an unfinished 455-sample episode. Independent installed-package and TorchScript consumers matched checkpoint actions on all actual observations within the recorded tolerance. This is bounded execution and export evidence, not learning success. The earlier zero-contact/freefall run is excluded from physical-task conclusions. The six-axis foot signal remains approximate on official, unmodified Isaac Lab/PhysX. See [the final corrected-terrain report](experiments/deepwbc-reconstructed-runtime-20260912.md), [training](deepwbc-training.md) and [evaluation/export](deepwbc-evaluation.md).
 

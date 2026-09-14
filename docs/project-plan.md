@@ -50,9 +50,7 @@ The RoboDuet second-method entrypoints now complete actual short execution acros
 Stage 1, Stage 2 and an independent-process resume. All four optimizers and
 saved RNG/curriculum/history state were checked; five exported modules in both
 inference modes match saved real inputs exactly. This is integration evidence,
-not effective learning or identical resumed physics trajectories. Full RoboDuet
-training retains a separately chosen budget. See [training](roboduet-training.md)
-and the [next complete learning experiment](roboduet-learning-plan.md).
+not effective learning or identical resumed physics trajectories. The separately authorized full RoboDuet candidate has now completed 50,000 updates and its original fixed nine-case evaluation. All nine final cases terminate for height within 0.10–0.28 seconds; no stable learned cooperation is established. See [training](roboduet-training.md), the [completed learning experiment](roboduet-learning-plan.md) and [final result](roboduet-model50000-evaluation.md).
 
 Item 1's original 5 ms contact and warmup diagnosis is complete; the
 initialization-only intervention did not remove the head collision and that
@@ -161,8 +159,8 @@ This bounded completion does not authorize larger DeepWBC training.
 AS2/Piper H's authorized candidate completed **fresh seed 0, 4096
 environments × 24 transitions × 4000 updates = 393,216,000 transitions**,
 with the nominal physical inputs and original UMI supplied tossing task.
-Its training service exited 0; RoboDuet remains in training under its original
-50000-update budget and assigned GPU operator.
+Its training service exited 0. RoboDuet subsequently completed its original
+50000-update budget and fixed nine-case final evaluation with a negative control result, recorded above.
 The first full-size attempt failed with OOM; preserving shared collision
 geometry repaired initialization without reducing the budget or changing the
 method. All 601 nominal control rows matched the previous corrected run exactly.
@@ -190,7 +188,7 @@ asset load is not a completed learned transfer.
 
 A subsequent user-approved AS2 assembly investigation registered the official foot-AS2 rails and Piper mounting frame, built an explicit 160×180×6 mm plate candidate, and verified the six assets in official Lab and MuJoCo. The separately approved old-actor adaptation completed seed 0, 1024×24×1000 updates in 55.37 minutes, before its 90-minute training-loop cap, with fresh critic/optimizer. All eight model0/final×nominal/20 kg-body+2 kg-payload×Lab/MuJoCo evaluations reached a reported outcome. Nominal Lab EE error worsened from 0.270458 to 0.554300 m and zero-ground-support fraction from 15.35% to 34.93%; fewer inverted cases (11 to 8 of 16) do not establish improvement. Loaded model0 Lab failed one case and censored 15; final completed 16 but inverted 10. All four MuJoCo groups failed all 16 cases numerically. The [protocol and full result](as2-pretraining-family.md) retain complete/failed/censored and failed-prefix boundaries. This finite experiment did not establish usable transferred control.
 
-The subsequent 22-asset AS2/Piper target distribution has completed official, unmodified Lab conversion and actual 22-environment reset plus 25 zero-action steps, with mass/COM/inertia readback and saved joint/TCP/whole-COM states. This proves actual asset consumption, not learning or demo visits to full-load arm extension; the post-auto-reset endpoint limitation is retained. The user has now selected general whole-body end-effector tracking across heights, directions, base coordination and payloads as the AS2 task. UMI-on-Legs remains the method, with a separately identified [eight-sequence AS2 task candidate](as2-general-ee-pretraining.md); original Go2 reproduction and tossing diagnostics remain distinct. The [task and control analysis](as2-umi-migration-next.md) records unretargeted original world goals and contact-free early wrist-speed growth. Target-distribution pretraining and actual pose coverage remain unfinished, with no extra learning budget inferred from this task choice or the completed six-condition adaptation. The original RoboDuet budget remains independent.
+The subsequent 22-asset AS2/Piper target distribution has completed official, unmodified Lab conversion and actual 22-environment reset plus 25 zero-action steps, with mass/COM/inertia readback and saved joint/TCP/whole-COM states. This proves actual asset consumption, not learning or demo visits to full-load arm extension; the post-auto-reset endpoint limitation is retained. The user has now selected general whole-body end-effector tracking across heights, directions, base coordination and payloads as the AS2 task. UMI-on-Legs remains the method, with a separately identified [eight-sequence AS2 task candidate](as2-general-ee-pretraining.md); original Go2 reproduction and tossing diagnostics remain distinct. The [task and control analysis](as2-umi-migration-next.md) records unretargeted original world goals and contact-free early wrist-speed growth. Target-distribution learning and commanded full-load extension coverage remain unfinished. On 2026-09-14 the user explicitly approved the prepared fresh seed 0, 1024×24, 1000-update-or-90-minute training-loop candidate and its fixed 64-case before/after evaluation, requesting publication of current progress before launch. The snapshot is authorized but not started; this budget is not inferred from task choice or the completed six-condition adaptation. The original RoboDuet budget remains independent and has reached its final stop boundary.
 
 After the completed AS2 single-candidate experiment, UniFP's separately bounded
 [official Lab integration](unifp-lab-runtime.md) completed 20+1 updates, a repaired

@@ -1,6 +1,6 @@
-# Next RoboDuet learning experiment
+# RoboDuet completed learning experiment
 
-The next development target is an actual two-stage learning result on Go1/ARX5.
+This page retains the approved two-stage learning protocol on Go1/ARX5 and its completed endpoint.
 The existing corrected two-update plus one-resume execution establishes
 integration, recovery and five-module export, not learning. UMI is retained as
 a completed research baseline with its known instability disclosed; small UMI
@@ -32,12 +32,11 @@ tracking differences do not block this next method.
   save ordinary recovery checkpoints every 400 updates. At the switch endpoint
   arm_update_count is still zero; the planned final count is 39999.
 
-This single seed-0 candidate is now running at the stated 4096-environment,
-50000-update budget. Initialization failures, the shared-geometry repair and
+This single seed-0 candidate completed the stated 4096-environment,
+50000-update budget on 2026-09-14, followed by the original fixed nine-case evaluation. Initialization failures, the shared-geometry repair and
 the independent-service resource boundary remain recorded in the
 [current status](status.md); the measured optimization and checkpoint resume
-are in the [throughput record](roboduet-throughput.md). This is not a completed
-learning result or three-seed reproduction. The local CLI still defaults to
+are in the [throughput record](roboduet-throughput.md). The [final endpoint](roboduet-model50000-evaluation.md) has finite weights and optimizer state, but all nine cases terminate for low height within 0.10–0.28 seconds. It is a completed negative single-candidate experiment, not stable learned cooperation or three-seed reproduction. The local CLI still defaults to
 2048 environments and needs an explicit additional-iteration budget; use the
 recorded command when reproducing this candidate. Actual run measurements,
 not the earlier 16-environment file timestamps, establish observed throughput
@@ -46,8 +45,7 @@ measurement is not a fixed completion-time prediction.
 
 The [10001 checkpoint and fixed evaluation](roboduet-model10001-evaluation.md)
 are now complete. All nine released-arm cases ended for low height before the
-first target switch; none completed 20 seconds. The checkpoint has zero arm
-updates and the run has since entered Stage 2. This negative milestone retains
+first target switch; none completed 20 seconds. That checkpoint has zero arm updates; the final checkpoint has 39,999 arm updates. This negative milestone retains
 the original 50000 endpoint and fixed protocol, with no automatic tuning or
 additional candidate.
 
